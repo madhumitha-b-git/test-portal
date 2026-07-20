@@ -47,6 +47,16 @@ const Test = () => {
   useEffect(() => {
     const loadQuestions = async () => {
       try {
+        const savedQuestions = JSON.parse(localStorage.getItem("questions") || "[]");
+        const savedAnswers = JSON.parse(localStorage.getItem("answers") || "{}");
+
+        if (savedQuestions.length > 0) {
+          setQuestions(savedQuestions);
+          setAnswers(savedAnswers);
+          setLoading(false);
+          return;
+        }
+
         const response = await fetchQuestions();
         setQuestions(response.data.questions);
       } catch (err) {

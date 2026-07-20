@@ -38,10 +38,10 @@ def create_tables():
         dynamodb.create_table(
             TableName="answer_table",
             KeySchema=[
-                {"AttributeName": "email", "KeyType": "HASH"}
+                {"AttributeName": "mailId", "KeyType": "HASH"}
             ],
             AttributeDefinitions=[
-                {"AttributeName": "email", "AttributeType": "S"}
+                {"AttributeName": "mailId", "AttributeType": "S"}
             ],
             BillingMode="PAY_PER_REQUEST"
         )
@@ -64,6 +64,22 @@ def create_tables():
         print("✅ question_table created")
     else:
         print("⚠️  question_table already exists")
+
+    # Create ProctoringSessions
+    if "ProctoringSessions" not in existing_tables:
+        dynamodb.create_table(
+            TableName="ProctoringSessions",
+            KeySchema=[
+                {"AttributeName": "email", "KeyType": "HASH"}
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "email", "AttributeType": "S"}
+            ],
+            BillingMode="PAY_PER_REQUEST"
+        )
+        print("✅ ProctoringSessions created")
+    else:
+        print("⚠️  ProctoringSessions already exists")
 
 if __name__ == "__main__":
     create_tables()

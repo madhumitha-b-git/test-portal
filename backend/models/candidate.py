@@ -6,7 +6,7 @@ class RegisterRequest(BaseModel):
     name: str
     email: str
     mobile: str
-    password: str
+    college: str
 
     @field_validator("name")
     @classmethod
@@ -29,12 +29,12 @@ class RegisterRequest(BaseModel):
             raise ValueError("Mobile must be 10 digits")
         return v
 
-    @field_validator("password")
+    @field_validator("college")
     @classmethod
-    def password_must_be_strong(cls, v):
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
-        return v
+    def college_must_not_be_empty(cls, v):
+        if not v.strip():
+            raise ValueError("College name cannot be empty")
+        return v.strip()
 
 
 class AnswerItem(BaseModel):

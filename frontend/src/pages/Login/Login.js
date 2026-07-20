@@ -10,7 +10,7 @@ const Login = () => {
     name: "",
     email: "",
     mobile: "",
-    password: "",
+    college: "",
   });
 
   // Error state
@@ -45,10 +45,8 @@ const Login = () => {
       newErrors.mobile = "Mobile must be 10 digits";
     }
 
-    if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    if (!formData.college.trim()) {
+      newErrors.college = "College name is required";
     }
 
     return newErrors;
@@ -153,20 +151,20 @@ const Login = () => {
             {errors.mobile && <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>}
           </div>
 
-          {/* Password */}
+          {/* College */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+              College
             </label>
             <input
-              type="password"
-              name="password"
-              value={formData.password}
+              type="text"
+              name="college"
+              value={formData.college}
               onChange={handleChange}
-              placeholder="Enter password (min 6 characters)"
+              placeholder="Enter your college name"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            {errors.college && <p className="text-red-500 text-xs mt-1">{errors.college}</p>}
           </div>
 
           {/* Submit Button */}

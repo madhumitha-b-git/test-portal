@@ -1,13 +1,7 @@
 import bcrypt
 from database.dynamodb import get_users_table, get_answers_table, get_questions_table
 
-def hash_password(password: str) -> str:
-    """Hashes plain text password using bcrypt"""
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-    return hashed.decode("utf-8")
-
-def register_candidate(name: str, email: str, mobile: str, password: str):
+def register_candidate(name: str, email: str, mobile: str, college: str):
     """
     Stores candidate details in Users table.
     Checks if email already exists before inserting.
@@ -19,15 +13,12 @@ def register_candidate(name: str, email: str, mobile: str, password: str):
     if "Item" in response:
         return {"success": False, "message": "Email already registered"}
 
-    # Hash password before storing
-    hashed_password = hash_password(password)
-
     # Store in DynamoDB
     table.put_item(Item={
         "email": email,
         "name": name,
         "mobile": mobile,
-        "password": hashed_password
+        "college": college
     })
 
     return {"success": True, "message": "Registered successfully"}
@@ -57,11 +48,15 @@ def submit_answers(name: str, email: str, responses: list):
     # Convert pydantic models to plain dicts
     responses_data = [r.model_dump() for r in responses]
 
+    import datetime
+    submit_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
     table.put_item(Item={
-        "email": email,
-        "name": name,
-        "responses": responses_data,
-        "status": "submitted"
+        "mailId": email,
+        "testId": "TEST-001",
+        "durationMinutes": 90,
+        "submitTime": submit_time,
+        "answers": responses_data
     })
 
     return {"success": True, "message": "Answers submitted successfully"}

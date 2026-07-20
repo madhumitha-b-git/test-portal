@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Base URL of FastAPI backend
 const API = axios.create({
-  baseURL: "https://dpm58qtugi.execute-api.ap-southeast-1.amazonaws.com",
+  baseURL: "http://localhost:8000",
   headers: {
     "Content-Type": "application/json",
   },
