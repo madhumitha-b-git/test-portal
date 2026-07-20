@@ -72,15 +72,16 @@ const Test = () => {
   const enterFullscreen = useCallback(() => {
     if (!document.documentElement.requestFullscreen) return Promise.resolve();
     return document.documentElement.requestFullscreen()
-      .then(() => setNeedsFullscreen(false))
+      .then(() => {
+        setNeedsFullscreen(false);
+        setTimeout(() => { initialFullscreenDoneRef.current = true; }, 500);
+      })
       .catch(() => setNeedsFullscreen(true));
   }, []);
 
   useEffect(() => {
-    enterFullscreen().finally(() => {
-      setTimeout(() => { initialFullscreenDoneRef.current = true; }, 500);
-    });
-  }, [enterFullscreen]);
+    setNeedsFullscreen(!document.fullscreenElement);
+  }, []);
 
   // ── Track fullscreen state ──
   useEffect(() => {
@@ -165,6 +166,9 @@ const Test = () => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
+      if (newCount > 3) {
+        terminateSession("Exceeded maximum warnings (3)");
+      }
     }).catch(() => {});
 
     setShowWarningOverlay(true);
@@ -232,6 +236,9 @@ const Test = () => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
+      if (newCount > 3) {
+        terminateSession("Exceeded maximum warnings (3)");
+      }
     }).catch(() => {}).finally(() => {
       warningInFlightRef.current = false;
     });
@@ -396,7 +403,7 @@ const Test = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* ── Fullscreen Overlay ── */}
-      {needsFullscreen && initialFullscreenDoneRef.current && !isTerminated && (
+      {needsFullscreen && !isTerminated && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
           <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 text-center">
