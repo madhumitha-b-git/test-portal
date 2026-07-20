@@ -15,7 +15,7 @@ def register(request: RegisterRequest):
             name=request.name,
             email=request.email,
             mobile=request.mobile,
-            password=request.password
+            college=request.college
         )
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
