@@ -47,11 +47,28 @@ def submit_answers(name: str, email: str, responses: list):
     # Convert pydantic models to plain dicts
     responses_data = [r.model_dump() for r in responses]
 
+    import datetime
+    submit_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
     table.put_item(Item={
-        "email": email,
-        "name": name,
-        "responses": responses_data,
-        "status": "submitted"
+        "mailId": email,
+        "testId": "TEST-001",
+        "durationMinutes": 90,
+        "submitTime": submit_time,
+        "answers": responses_data
     })
 
     return {"success": True, "message": "Answers submitted successfully"}
+
+def get_answers_by_test_id(test_id: str):
+    """
+    Fetches answers for a specific testId from Answers table.
+    """
+    from boto3.dynamodb.conditions import Attr
+    table = get_answers_table()
+    
+    response = table.scan(
+        FilterExpression=Attr("testId").eq(test_id)
+    )
+    
+    return response.get("Items", [])

@@ -18,9 +18,9 @@ def get_all_sessions():
     items = response.get("Items", [])
     items.sort(key=lambda x: x.get("startedTime", ""), reverse=True)
     return [{
-        "email": item["email"],
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ""),
+        "email": item.get("mailId", ""),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
     } for item in items]
@@ -31,11 +31,13 @@ def start_session(email: str):
     started = _now_iso()
 
     table.put_item(Item={
-        "email": email,
-        "startedTime": started,
-        "endedTime": "",
-        "warningCount": 0,
+        "mailId": email,
+        "durationMinutes": 60,
+        "starttime": started,
+        "endtime": "",
         "status": "IN_PROGRESS",
+        "testId": "TEST-001",
+        "warningCount": 0,
     })
 
     return {"email": email, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
@@ -43,14 +45,14 @@ def start_session(email: str):
 
 def get_session(email: str):
     table = get_proctoring_sessions_table()
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": email})
     item = response.get("Item")
     if not item:
         return None
     return {
-        "email": item["email"],
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ""),
+        "email": item.get("mailId", email),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
     }
@@ -58,7 +60,7 @@ def get_session(email: str):
 
 def increment_warning(email: str):
     table = get_proctoring_sessions_table()
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": email})
     item = response.get("Item")
     if not item:
         return None
@@ -67,7 +69,7 @@ def increment_warning(email: str):
     new_count = current + 1
 
     table.update_item(
-        Key={"email": email},
+        Key={"mailId": email},
         UpdateExpression="SET warningCount = :wc",
         ExpressionAttributeValues={":wc": new_count},
     )
@@ -80,19 +82,19 @@ def end_session(email: str, status: str):
     ended = _now_iso()
 
     table.update_item(
-        Key={"email": email},
-        UpdateExpression="SET endedTime = :et, #s = :st",
+        Key={"mailId": email},
+        UpdateExpression="SET endtime = :et, #s = :st",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":et": ended, ":st": status},
     )
 
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": email})
     item = response.get("Item", {})
 
     return {
-        "email": item.get("email", email),
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ended),
+        "email": item.get("mailId", email),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ended),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", status),
     }

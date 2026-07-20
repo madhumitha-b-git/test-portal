@@ -54,3 +54,15 @@ def submit(request: SubmitRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/answers/{test_id}")
+def get_answers(test_id: str):
+    """
+    GET /answers/{test_id}
+    Retrieves candidate answers from DynamoDB by testId
+    """
+    try:
+        data = candidate_service.get_answers_by_test_id(test_id)
+        return {"answers": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

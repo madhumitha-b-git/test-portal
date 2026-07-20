@@ -44,10 +44,10 @@ const Login = () => {
     } else if (!/^\d{10}$/.test(formData.mobile)) {
       newErrors.mobile = "Mobile must be 10 digits";
     }
+
     if (!formData.college.trim()) {
       newErrors.college = "College name is required";
     }
-    
 
     return newErrors;
   };
@@ -154,7 +154,7 @@ const Login = () => {
           {/* College */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              College Name
+              Password
             </label>
             <input
               type="text"

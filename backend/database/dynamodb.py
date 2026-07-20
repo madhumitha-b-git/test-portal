@@ -6,11 +6,22 @@ load_dotenv()
 
 def get_dynamodb():
     region = os.getenv("AWS_REGION") or "ap-southeast-1"
+    
+    # AWS Lambda automatically sets AWS_EXECUTION_ENV. 
+    is_lambda = os.getenv("AWS_EXECUTION_ENV") is not None
     profile = os.getenv("AWS_PROFILE")
-    if profile:
-        session = boto3.Session(profile_name=profile, region_name=region)
-    else:
+    
+    if is_lambda:
+        # Boto3 implicitly checks os.environ["AWS_PROFILE"]. 
+        # We MUST remove it so it doesn't crash Lambda's auth signature.
+        os.environ.pop("AWS_PROFILE", None)
         session = boto3.Session(region_name=region)
+    else:
+        if profile:
+            session = boto3.Session(profile_name=profile, region_name=region)
+        else:
+            session = boto3.Session(region_name=region)
+            
     return session.resource("dynamodb")
 
 def get_users_table():
