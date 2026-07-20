@@ -19,8 +19,8 @@ def get_all_sessions():
     items.sort(key=lambda x: x.get("startedTime", ""), reverse=True)
     return [{
         "email": item.get("mailId", ""),
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ""),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
     } for item in items]
@@ -32,10 +32,12 @@ def start_session(email: str):
 
     table.put_item(Item={
         "mailId": email,
-        "startedTime": started,
-        "endedTime": "",
-        "warningCount": 0,
+        "durationMinutes": 60,
+        "starttime": started,
+        "endtime": "",
         "status": "IN_PROGRESS",
+        "testId": "TEST-001",
+        "warningCount": 0,
     })
 
     return {"email": email, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
@@ -49,8 +51,8 @@ def get_session(email: str):
         return None
     return {
         "email": item.get("mailId", email),
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ""),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
     }
@@ -81,7 +83,7 @@ def end_session(email: str, status: str):
 
     table.update_item(
         Key={"mailId": email},
-        UpdateExpression="SET endedTime = :et, #s = :st",
+        UpdateExpression="SET endtime = :et, #s = :st",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":et": ended, ":st": status},
     )
@@ -91,8 +93,8 @@ def end_session(email: str, status: str):
 
     return {
         "email": item.get("mailId", email),
-        "startedTime": item.get("startedTime", ""),
-        "endedTime": item.get("endedTime", ended),
+        "startedTime": item.get("starttime", ""),
+        "endedTime": item.get("endtime", ended),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", status),
     }
