@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { submitAnswers } from "../../services/api";
+import { submitAnswers, submitProctoringReport } from "../../services/api";
 
 const Review = () => {
   const navigate = useNavigate();
@@ -11,12 +11,17 @@ const Review = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (localStorage.getItem("testSubmitted") === "true") {
+      navigate("/thankyou", { replace: true });
+      return;
+    }
+
     // Load questions and answers from localStorage
     const savedQuestions = JSON.parse(localStorage.getItem("questions") || "[]");
     const savedAnswers = JSON.parse(localStorage.getItem("answers") || "{}");
     setQuestions(savedQuestions);
     setAnswers(savedAnswers);
-  }, []);
+  }, [navigate]);
 
   const answeredCount = Object.keys(answers).length;
   const unansweredCount = questions.length - answeredCount;
@@ -40,12 +45,31 @@ const Review = () => {
         responses,
       });
 
+      // Submit proctoring report with SUCCESS status
+      const startedTime = localStorage.getItem("proctoringStartedTime") || "";
+      const endedTime = new Date().toISOString();
+      const warningCount = parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10);
+
+      submitProctoringReport({
+        email: candidate.email,
+        startedTime,
+        endedTime,
+        status: "SUCCESS",
+        warningCount,
+      }).catch(() => {});
+
+      // Mark as submitted to block re-entry
+      localStorage.setItem("testSubmitted", "true");
+
       // Clear localStorage
       localStorage.removeItem("answers");
       localStorage.removeItem("questions");
+      localStorage.removeItem("proctoringStartedTime");
+      localStorage.removeItem("proctoringWarningCount");
+      localStorage.removeItem("proctoringStatus");
 
       // Redirect to Thank You page
-      navigate("/thankyou");
+      navigate("/thankyou", { replace: true });
     } catch (err) {
       setError("Submission failed. Please try again.");
     } finally {
