@@ -154,7 +154,7 @@ const Login = () => {
           {/* College */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+              College Name
             </label>
             <input
               type="text"
