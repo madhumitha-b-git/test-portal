@@ -28,20 +28,21 @@ def get_all_sessions():
     } for item in items]
 
 
-def start_session(mailId: str):
+def start_session(mailId: str, testId: str):
     table = get_proctoring_sessions_table()
     started = _now_iso()
 
-    table.put_item(Item={
-        "mailId": mailId,
-        "durationMinutes": 60,
-        "startedTime": started,
-        "endedTime": "",
-        "status": "IN_PROGRESS",
-        "testId": "TEST-001",
-        "warningCount": 0,
-    })
-
+    table.put_item(
+        Item={
+            "mailId": mailId,
+            "durationMinutes": 60,
+            "startedTime": started,
+            "endedTime": "",
+            "status": "IN_PROGRESS",
+            "testId": testId,
+            "warningCount": 0,
+        }
+    )
     return {"mailId": mailId, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
 
 

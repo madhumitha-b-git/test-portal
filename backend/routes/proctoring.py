@@ -20,7 +20,7 @@ def get_all_sessions():
 @router.post("/session")
 def start_session(request: SessionStartRequest):
     try:
-        result = proctoring_service.start_session(request.mailId)
+        result = proctoring_service.start_session(request.mailId, request.testId)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

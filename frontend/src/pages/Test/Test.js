@@ -9,19 +9,20 @@ const FULLSCREEN_TIMEOUT_MS = 15000;
 const Test = () => {
   const navigate = useNavigate();
 
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState(() => JSON.parse(localStorage.getItem("questions") || "[]"));
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
+  const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [testId, setTestId] = useState(() => localStorage.getItem("testId") || "");
 
-  const [warningCount, setWarningCount] = useState(0);
+  const [warningCount, setWarningCount] = useState(() => parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10));
   const [showWarningOverlay, setShowWarningOverlay] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [needsFullscreen, setNeedsFullscreen] = useState(false);
   const [fullscreenCountdown, setFullscreenCountdown] = useState(null);
-
+  const [timeLeft, setTimeLeft] = useState(null);
   const awayTimerRef = useRef(null);
   const lockoutTimerRef = useRef(null);
   const isAwayRef = useRef(false);
@@ -34,7 +35,7 @@ const Test = () => {
   const questionsRef = useRef(questions);
 
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
-  const mailId = candidate.mailId || "";
+  const email = candidate.mailId || candidate.email || "";
 
   // ── Redirect if already submitted ──
   useEffect(() => {
@@ -43,45 +44,73 @@ const Test = () => {
     }
   }, [navigate]);
 
-  // ── Fetch questions on mount ──
+  // ── Initialization (Questions & Proctoring Session) ──
   useEffect(() => {
-    const loadQuestions = async () => {
-      try {
-        const savedQuestions = JSON.parse(localStorage.getItem("questions") || "[]");
-        const savedAnswers = JSON.parse(localStorage.getItem("answers") || "{}");
+    if (sessionStartedRef.current || !email) return;
+    sessionStartedRef.current = true;
 
-        if (savedQuestions.length > 0) {
-          setQuestions(savedQuestions);
-          setAnswers(savedAnswers);
-          setLoading(false);
-          return;
+    const initializeTest = async () => {
+      try {
+        let duration = parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10);
+        let currentTestId = testId;
+
+        // Fetch questions if not cached
+        const cachedQuestions = localStorage.getItem("questions");
+        if (!cachedQuestions || cachedQuestions === "[]") {
+          const response = await fetchQuestions();
+          setQuestions(response.data.questions);
+          localStorage.setItem("questions", JSON.stringify(response.data.questions));
+          
+          currentTestId = response.data.testId;
+          setTestId(currentTestId);
+          localStorage.setItem("testId", currentTestId);
+          
+          duration = response.data.total_duration_minutes || 60;
+          localStorage.setItem("totalDurationMinutes", duration.toString());
         }
 
-        const response = await fetchQuestions();
-        setQuestions(response.data.questions);
+        // Handle Proctoring Session & Timer
+        const existingStartedTime = localStorage.getItem("proctoringStartedTime");
+        if (existingStartedTime) {
+          // Resume existing session
+          const startedAt = new Date(existingStartedTime).getTime();
+          const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+          setTimeLeft(Math.max(0, duration * 60 - elapsedSeconds));
+        } else {
+          // Start completely new session
+          const startedTime = new Date().toISOString();
+          localStorage.setItem("proctoringStartedTime", startedTime);
+          localStorage.setItem("proctoringWarningCount", "0");
+          localStorage.setItem("proctoringStatus", "SUCCESS");
+          setTimeLeft(duration * 60);
+
+          if (currentTestId) {
+            startProctoringSession({ mailId: email, testId: currentTestId, durationMinutes: duration }).catch(() => {});
+          }
+        }
       } catch (err) {
-        setError("Failed to load questions. Please try again.");
+        setError("Failed to load test session. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-    loadQuestions();
-  }, []);
+
+    initializeTest();
+  }, [email, testId]);
 
   // ── Request fullscreen (must be called from user gesture) ──
   const enterFullscreen = useCallback(() => {
     if (!document.documentElement.requestFullscreen) return Promise.resolve();
     return document.documentElement.requestFullscreen()
-      .then(() => {
-        setNeedsFullscreen(false);
-        setTimeout(() => { initialFullscreenDoneRef.current = true; }, 500);
-      })
+      .then(() => setNeedsFullscreen(false))
       .catch(() => setNeedsFullscreen(true));
   }, []);
 
   useEffect(() => {
-    setNeedsFullscreen(!document.fullscreenElement);
-  }, []);
+    enterFullscreen().finally(() => {
+      setTimeout(() => { initialFullscreenDoneRef.current = true; }, 500);
+    });
+  }, [enterFullscreen]);
 
   // ── Track fullscreen state ──
   useEffect(() => {
@@ -90,18 +119,6 @@ const Test = () => {
     return () => document.removeEventListener("fullscreenchange", update);
   }, [isTerminated]);
 
-  // ── Start proctoring session on mount ──
-  useEffect(() => {
-    if (sessionStartedRef.current || !mailId) return;
-    sessionStartedRef.current = true;
-
-    const startedTime = new Date().toISOString();
-    localStorage.setItem("proctoringStartedTime", startedTime);
-    localStorage.setItem("proctoringWarningCount", "0");
-    localStorage.setItem("proctoringStatus", "SUCCESS");
-
-    startProctoringSession({ mailId }).catch(() => {});
-  }, [mailId]);
 
   // ── Terminate session ──
   const terminateSession = useCallback((reason) => {
@@ -120,6 +137,7 @@ const Test = () => {
     const currentQuestions = questionsRef.current;
 
     const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
+    const mailId = candidate.mailId || candidate.email;
 
     const responses = currentQuestions.map((q) => ({
       questionId: q.questionId,
@@ -128,19 +146,26 @@ const Test = () => {
 
     submitAnswers({
       name: candidate.name,
-      mailId: candidate.mailId,
-      responses,
+      mailId: mailId,
+      testId: testId,
+      durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+      submitTime: endedTime,
+      responses: responses,
     }).catch(() => {});
 
     submitProctoringReport({
-      mailId,
-      startedTime,
-      endedTime,
+      mailId: mailId,
+      testId: testId,
+      durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+      starttime: startedTime,
+      endtime: endedTime,
       status: "TERMINATED",
       warningCount: count,
     }).catch(() => {});
 
     localStorage.setItem("testSubmitted", "true");
+    localStorage.setItem("testTerminated", "true");
+    localStorage.setItem("terminationReason", reason);
     localStorage.removeItem("answers");
     localStorage.removeItem("questions");
     localStorage.removeItem("proctoringStartedTime");
@@ -148,7 +173,7 @@ const Test = () => {
     localStorage.removeItem("proctoringStatus");
 
     setTimeout(() => navigate("/thankyou", { replace: true }), 2000);
-  }, [mailId, navigate]);
+  }, [testId, navigate]);
 
   // ── Handle tab / window returning within 15s ──
   const handleReturnFromAway = useCallback(() => {
@@ -162,20 +187,17 @@ const Test = () => {
         .catch(() => setNeedsFullscreen(true));
     }
 
-    incrementWarning({ mailId }).then((res) => {
+    incrementWarning({ mailId: email, testId: testId }).then((res) => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
-      if (newCount > 3) {
-        terminateSession("Exceeded maximum warnings (3)");
-      }
     }).catch(() => {});
 
     setShowWarningOverlay(true);
     lockoutTimerRef.current = setTimeout(() => {
       setShowWarningOverlay(false);
     }, WARNING_LOCKOUT_MS);
-  }, [mailId]);
+  }, [email, testId]);
 
   // ── Start the 15s away countdown ──
   const startAwayCountdown = useCallback(() => {
@@ -232,17 +254,14 @@ const Test = () => {
     if (warningInFlightRef.current) return;
     warningInFlightRef.current = true;
 
-    incrementWarning({ mailId }).then((res) => {
+    incrementWarning({ mailId: email, testId: testId }).then((res) => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
-      if (newCount > 3) {
-        terminateSession("Exceeded maximum warnings (3)");
-      }
     }).catch(() => {}).finally(() => {
       warningInFlightRef.current = false;
     });
-  }, [needsFullscreen, isTerminated, mailId]);
+  }, [needsFullscreen, isTerminated, email, testId]);
 
   // ── Fullscreen countdown: terminate if user ignores for 15s ──
   useEffect(() => {
@@ -338,6 +357,74 @@ const Test = () => {
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
 
+  // ── Auto Submit when time is up ──
+  const autoSubmit = useCallback(async () => {
+    setLoading(true);
+    try {
+      const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
+      const mailId = candidate.mailId || candidate.email;
+      const currentAnswers = answersRef.current;
+      const currentQuestions = questionsRef.current;
+
+      const responses = currentQuestions.map((q) => ({
+        questionId: q.questionId,
+        selectedOption: currentAnswers[q.questionId] || "",
+      }));
+
+      await submitAnswers({
+        name: candidate.name,
+        mailId: mailId,
+        testId: testId,
+        durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+        submitTime: new Date().toISOString(),
+        responses: responses,
+      });
+
+      const startedTime = localStorage.getItem("proctoringStartedTime") || "";
+      const endedTime = new Date().toISOString();
+      const count = parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10);
+
+      submitProctoringReport({
+        mailId: mailId,
+        testId: testId,
+        durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+        starttime: startedTime,
+        endtime: endedTime,
+        status: "SUCCESS",
+        warningCount: count,
+      }).catch(() => {});
+
+      localStorage.setItem("testSubmitted", "true");
+      localStorage.removeItem("answers");
+      localStorage.removeItem("questions");
+      localStorage.removeItem("proctoringStartedTime");
+      localStorage.removeItem("proctoringWarningCount");
+      localStorage.removeItem("proctoringStatus");
+
+      navigate("/thankyou", { replace: true });
+    } catch (err) {
+      setError("Auto-submission failed. Please contact support.");
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate, testId]);
+
+  // ── Timer Effect ──
+  useEffect(() => {
+    if (timeLeft === null || isTerminated) return;
+    
+    if (timeLeft <= 0) {
+      autoSubmit();
+      return;
+    }
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [timeLeft, isTerminated, autoSubmit]);
+
   // ── Option select ──
   const handleAnswer = (questionId, optionId) => {
     if (showWarningOverlay || isTerminated) return;
@@ -360,6 +447,7 @@ const Test = () => {
   const handleSubmit = () => {
     localStorage.setItem("answers", JSON.stringify(answers));
     localStorage.setItem("questions", JSON.stringify(questions));
+    localStorage.setItem("testId", testId);
     navigate("/review", { replace: true });
   };
 
@@ -382,6 +470,13 @@ const Test = () => {
 
   const currentQuestion = questions[currentIndex];
 
+  const formatTime = (seconds) => {
+    if (seconds === null) return "--:--";
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
   // ── Terminated screen ──
   if (isTerminated) {
     return (
@@ -403,7 +498,7 @@ const Test = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* ── Fullscreen Overlay ── */}
-      {needsFullscreen && !isTerminated && (
+      {needsFullscreen && initialFullscreenDoneRef.current && !isTerminated && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
           <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 text-center">
@@ -483,6 +578,9 @@ const Test = () => {
         <div className="bg-white rounded-xl shadow-md p-4 mb-6 flex justify-between items-center">
           <h1 className="text-xl font-bold text-blue-600">Online Assessment</h1>
           <div className="flex items-center gap-4">
+            <span className={`text-sm font-bold ${timeLeft !== null && timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
+              Time Left: {formatTime(timeLeft)}
+            </span>
             <span className="text-yellow-600 text-sm font-medium">
               Warnings: {warningCount}
             </span>

@@ -3,6 +3,7 @@ from pydantic import BaseModel, field_validator
 
 class SessionStartRequest(BaseModel):
     mailId: str
+    testId: str
 
     @field_validator("mailId")
     @classmethod
