@@ -34,7 +34,6 @@ def submit(request: SubmitRequest):
     """
     try:
         result = candidate_service.submit_answers(
-            name=request.name,
             mailId=request.mailId,
             testId=request.testId,
             responses=request.responses

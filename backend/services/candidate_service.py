@@ -1,76 +1,157 @@
-from database.dynamodb import get_users_table, get_answers_table, get_questions_table
+from datetime import datetime, timezone
 
-def register_candidate(name: str, mailId: str, mobile: str, college: str):
+from boto3.dynamodb.conditions import Attr
+
+from database.dynamodb import (
+    get_users_table,
+    get_answers_table,
+    get_questions_table,
+)
+
+from services.sns_service import publish_test_submitted_event
+
+
+def register_candidate(
+    name: str,
+    mailId: str,
+    mobile: str,
+    college: str,
+):
     """
     Stores candidate details in Users table.
     """
+
     table = get_users_table()
 
-    # Store in DynamoDB (this will insert or update existing candidate)
-    table.put_item(Item={
-        "mailId": mailId,
-        "name": name,
-        "mobile": mobile,
-        "college": college
-    })
+    table.put_item(
+        Item={
+            "mailId": mailId,
+            "name": name,
+            "mobile": mobile,
+            "college": college,
+        }
+    )
 
-    return {"success": True, "message": "Registered successfully"}
+    return {
+        "success": True,
+        "message": "Registered successfully",
+    }
 
-def submit_answers(name: str, mailId: str, testId: str, responses: list):
+
+def submit_answers(
+    mailId: str,
+    testId: str,
+    responses: list,
+):
     """
-    Stores candidate answers in Answers table.
+    Stores candidate answers in DynamoDB
+    and publishes the same response format to SNS.
     """
+
     table = get_answers_table()
 
-    # Convert pydantic models to plain dicts
-    responses_data = [r.model_dump() for r in responses]
+    # Convert Pydantic models into plain dictionaries
+    responses_data = [
+        response.model_dump()
+        for response in responses
+    ]
 
-    import datetime
-    submit_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    submit_time = datetime.now(
+        timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    table.put_item(Item={
-        "mailId": mailId,
-        "testId": testId,
-        "durationMinutes": 90,
-        "submitTime": submit_time,
-        "answers": responses_data
-    })
+    # Save submission to DynamoDB
+    table.put_item(
+        Item={
+            "mailId": mailId,
+            "testId": testId,
+            "responses": responses_data,
+            # "submitTime": submit_time,
+        }
+    )
 
-    return {"success": True, "message": "Answers submitted successfully"}
+    # Publish the same structure to SNS
+    sns_result = publish_test_submitted_event(
+        test_id=testId,
+        mail_id=mailId,
+        responses=responses_data,
+    )
 
-def get_answers_by_test_id(test_id: str):
+    return {
+        "success": True,
+        "message": "Answers submitted successfully",
+        "sns_message_id": sns_result["message_id"],
+    }
+
+
+def get_answers_by_test_id(
+    test_id: str,
+):
     """
-    Fetches answers for a specific testId from Answers table.
+    Fetches answers for a specific testId
+    from Answers table.
     """
-    from boto3.dynamodb.conditions import Attr
+
     table = get_answers_table()
-    
+
     response = table.scan(
         FilterExpression=Attr("testId").eq(test_id)
     )
-    
+
     return response.get("Items", [])
 
-def get_candidate_answers(mail_id: str):
+
+def get_candidate_answers(
+    mail_id: str,
+):
     """
-    Fetches candidate details from users table and their answers from answers table.
+    Fetches candidate details from Users table
+    and answers from Answers table.
     """
+
     users_table = get_users_table()
     answers_table = get_answers_table()
-    
-    user_resp = users_table.get_item(Key={"mailId": mail_id})
-    ans_resp = answers_table.get_item(Key={"mailId": mail_id})
-    
+
+    user_response = users_table.get_item(
+        Key={
+            "mailId": mail_id,
+        }
+    )
+
+    answer_response = answers_table.get_item(
+        Key={
+            "mailId": mail_id,
+        }
+    )
+
     return {
-        "candidate": user_resp.get("Item", {}),
-        "testData": ans_resp.get("Item", {})
+        "candidate": user_response.get(
+            "Item",
+            {}
+        ),
+        "testData": answer_response.get(
+            "Item",
+            {}
+        ),
     }
 
-def get_candidate(mail_id: str):
-    """
-    Fetches candidate details from users table.
-    """
-    users_table = get_users_table()
-    user_resp = users_table.get_item(Key={"mailId": mail_id})
-    return user_resp.get("Item", {})
 
+def get_candidate(
+    mail_id: str,
+):
+    """
+    Fetches candidate details from Users table.
+    """
+
+    users_table = get_users_table()
+
+    response = users_table.get_item(
+        Key={
+            "mailId": mail_id,
+        }
+    )
+
+    return response.get(
+        "Item",
+        {}
+    )

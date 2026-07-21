@@ -4,6 +4,43 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_aws_session():
+    """
+    Creates and returns a boto3 AWS session.
+    """
+
+    region = os.getenv("AWS_REGION","ap-southeast-1",)
+
+    is_lambda = (
+        os.getenv("AWS_EXECUTION_ENV")
+        is not None
+    )
+
+    profile = os.getenv("AWS_PROFILE")
+
+    if is_lambda:
+
+        # Lambda uses IAM execution role
+        os.environ.pop(
+            "AWS_PROFILE",
+            None,
+        )
+
+        return boto3.Session(
+            region_name=region,
+        )
+
+    if profile:
+
+        return boto3.Session(
+            profile_name=profile,
+            region_name=region,
+        )
+
+    return boto3.Session(
+        region_name=region,
+    )
+
 def get_dynamodb():
     region = os.getenv("AWS_REGION") or "ap-southeast-1"
     
