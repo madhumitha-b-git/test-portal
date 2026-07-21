@@ -496,7 +496,7 @@ const Test = () => {
           {/* Question Area */}
           <div className="flex-1 bg-white rounded-xl shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-6">
-              Q{currentIndex + 1}. {currentQuestion.text}
+              Q{currentIndex + 1}. {currentQuestion.question || currentQuestion.text}
             </h2>
 
             <div className="space-y-3">

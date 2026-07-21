@@ -26,19 +26,6 @@ def register(request: RegisterRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/questions")
-def questions():
-    """
-    GET /questions
-    Reads and returns all questions from questions.json
-    """
-    try:
-        data = candidate_service.get_questions()
-        return {"questions": data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.post("/submit")
 def submit(request: SubmitRequest):
     """

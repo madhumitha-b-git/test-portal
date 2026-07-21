@@ -11,8 +11,14 @@ const API = axios.create({
 // POST /register - Register candidate
 export const registerCandidate = (data) => API.post("/register", data);
 
-// GET /questions - Fetch all questions
-export const fetchQuestions = () => API.get("/questions");
+// GET /questions - Fetch all questions from Admin API
+export const fetchQuestions = async () => {
+  const res = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
+  // The API returns tests in `items`, we map the first test's questions
+  // to match what the frontend expects { data: { questions: [...] } }
+  const firstTest = res.data.items?.[0] || { questions: [] };
+  return { data: { questions: firstTest.questions } };
+};
 
 // POST /submit - Submit answers
 export const submitAnswers = (data) => API.post("/submit", data);

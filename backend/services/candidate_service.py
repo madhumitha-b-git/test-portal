@@ -16,22 +16,6 @@ def register_candidate(name: str, mailId: str, mobile: str, college: str):
 
     return {"success": True, "message": "Registered successfully"}
 
-def get_questions():
-    """
-    Reads all questions from DynamoDB Questions table.
-    Returns list of questions.
-    """
-    table = get_questions_table()
-
-    # Scan fetches all items from the table
-    response = table.scan()
-    questions = response.get("Items", [])
-
-    # Sort questions by questionId (q001, q002 ...)
-    questions.sort(key=lambda x: x["questionId"])
-
-    return questions
-
 def submit_answers(name: str, mailId: str, responses: list):
     """
     Stores candidate answers in Answers table.
