@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchQuestions, startProctoringSession, incrementWarning, submitAnswers, submitProctoringReport } from "../../services/api";
+import IdpLogo from "../../components/IdpLogo";
+import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, FileCheck2, User } from "lucide-react";
 
 const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
@@ -89,7 +91,7 @@ const Test = () => {
           }
         }
       } catch (err) {
-        setError("Failed to load test session. Please try again.");
+        setError("Failed to load test session. Please refresh and try again.");
       } finally {
         setLoading(false);
       }
@@ -98,7 +100,7 @@ const Test = () => {
     initializeTest();
   }, [email, testId]);
 
-  // ── Request fullscreen (must be called from user gesture) ──
+  // ── Request fullscreen ──
   const enterFullscreen = useCallback(() => {
     if (!document.documentElement.requestFullscreen) return Promise.resolve();
     return document.documentElement.requestFullscreen()
@@ -118,7 +120,6 @@ const Test = () => {
     document.addEventListener("fullscreenchange", update);
     return () => document.removeEventListener("fullscreenchange", update);
   }, [isTerminated]);
-
 
   // ── Terminate session ──
   const terminateSession = useCallback((reason) => {
@@ -199,18 +200,18 @@ const Test = () => {
     }, WARNING_LOCKOUT_MS);
   }, [email, testId]);
 
-  // ── Start the 15s away countdown ──
+  // ── Start away countdown ──
   const startAwayCountdown = useCallback(() => {
     if (isAwayRef.current || isTerminated) return;
     isAwayRef.current = true;
 
     awayTimerRef.current = setTimeout(() => {
       isAwayRef.current = false;
-      terminateSession("Left exam for more than 15 seconds");
+      terminateSession("Left exam window for more than 15 seconds");
     }, TAB_RETURN_LIMIT_MS);
   }, [isTerminated, terminateSession]);
 
-  // ── Visibility change (tab switch) ──
+  // ── Visibility change ──
   useEffect(() => {
     const onVisibilityChange = () => {
       if (isTerminated) return;
@@ -224,7 +225,7 @@ const Test = () => {
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [isTerminated, startAwayCountdown, handleReturnFromAway]);
 
-  // ── Window blur (app switch / alt-tab) ──
+  // ── Window blur / focus ──
   useEffect(() => {
     const onBlur = () => {
       if (!isTerminated) startAwayCountdown();
@@ -240,7 +241,7 @@ const Test = () => {
     };
   }, [isTerminated, startAwayCountdown, handleReturnFromAway]);
 
-  // ── When fullscreen is lost during test: warn ──
+  // ── Fullscreen warning ──
   useEffect(() => {
     if (!initialFullscreenDoneRef.current) return;
     if (document.fullscreenElement || isTerminated || !needsFullscreen) return;
@@ -263,7 +264,7 @@ const Test = () => {
     });
   }, [needsFullscreen, isTerminated, email, testId]);
 
-  // ── Fullscreen countdown: terminate if user ignores for 15s ──
+  // ── Fullscreen countdown ──
   useEffect(() => {
     const showCountdown = needsFullscreen && initialFullscreenDoneRef.current && !isTerminated;
 
@@ -286,7 +287,7 @@ const Test = () => {
     fullscreenTimerRef.current = setTimeout(() => {
       clearInterval(fullscreenIntervalRef.current);
       setFullscreenCountdown(null);
-      terminateSession("You did not enter fullscreen in time");
+      terminateSession("You did not re-enter fullscreen in time");
     }, FULLSCREEN_TIMEOUT_MS);
 
     return () => {
@@ -301,9 +302,7 @@ const Test = () => {
     if (isTerminated) return;
 
     const blockCopyPaste = (e) => {
-      if (
-        (e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "u"].includes(e.key.toLowerCase())
-      ) {
+      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "u"].includes(e.key.toLowerCase())) {
         e.preventDefault();
         return false;
       }
@@ -353,11 +352,11 @@ const Test = () => {
     };
   }, []);
 
-  // ── Keep refs in sync with state ──
+  // ── Keep refs in sync ──
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
 
-  // ── Auto Submit when time is up ──
+  // ── Auto Submit ──
   const autoSubmit = useCallback(async () => {
     setLoading(true);
     try {
@@ -451,25 +450,6 @@ const Test = () => {
     navigate("/review", { replace: true });
   };
 
-  // ── Loading / Error states ──
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-gray-600 text-lg">Loading questions...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-red-500 text-lg">{error}</p>
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[currentIndex];
-
   const formatTime = (seconds) => {
     if (seconds === null) return "--:--";
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -477,64 +457,87 @@ const Test = () => {
     return `${m}:${s}`;
   };
 
+  // ── Loading / Error states ──
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800">
+        <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-slate-600 font-semibold text-sm">Loading Examination Dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-red-200 p-8 rounded-xl max-w-md text-center shadow-sm">
+          <AlertCircle className="w-10 h-10 text-red-600 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Session Error</h2>
+          <p className="text-slate-600 text-xs mb-5">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg text-xs transition"
+          >
+            Retry Loading
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentQuestion = questions[currentIndex];
+  const answeredCount = Object.keys(answers).length;
+  const progressPercent = Math.round((answeredCount / (questions.length || 1)) * 100);
+
   // ── Terminated screen ──
   if (isTerminated) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white p-10 rounded-xl shadow-md w-full max-w-md text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm max-w-md w-full text-center border border-red-200">
+          <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-3">Session Terminated</h1>
-          <p className="text-gray-500 text-sm">{terminationReason}</p>
-          <p className="text-gray-400 text-xs mt-2">Redirecting...</p>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Assessment Terminated</h1>
+          <p className="text-red-600 text-xs mb-3 font-medium">{terminationReason}</p>
+          <p className="text-slate-500 text-xs">Redirecting candidate session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative">
+      
       {/* ── Fullscreen Overlay ── */}
       {needsFullscreen && initialFullscreenDoneRef.current && !isTerminated && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
-          <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 text-center">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'bg-red-100' : 'bg-blue-100'}`}>
-              <svg className={`w-10 h-10 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'text-red-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-slate-200">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
+              <Maximize className="w-7 h-7" />
             </div>
-            <h2 className={`text-2xl font-bold mb-2 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'text-red-600' : 'text-gray-800'}`}>
-              {fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'Warning!' : 'Fullscreen Required'}
+            <h2 className={`text-lg font-bold mb-2 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'text-red-600' : 'text-slate-900'}`}>
+              {fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'Security Warning!' : 'Fullscreen Mode Required'}
             </h2>
-            <p className="text-gray-600 text-sm mb-4">
-              You must be in fullscreen mode to continue the assessment.
-              Please click the button below to enter fullscreen.
+            <p className="text-slate-600 text-xs mb-4">
+              IDP Assess 360 requires active Fullscreen mode to continue your assessment.
             </p>
+
             {fullscreenCountdown !== null && (
-              <div className="mb-4">
-                <div className={`text-5xl font-bold ${fullscreenCountdown <= 5 ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
-                  {fullscreenCountdown}
+              <div className="mb-5 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+                <div className={`text-3xl font-extrabold ${fullscreenCountdown <= 5 ? 'text-red-600' : 'text-slate-900'}`}>
+                  {fullscreenCountdown}s
                 </div>
-                <p className={`text-sm mt-1 font-semibold ${fullscreenCountdown <= 5 ? 'text-red-600' : 'text-gray-500'}`}>
-                  seconds remaining
+                <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">
+                  Seconds remaining before termination
                 </p>
-                <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-1000 ${fullscreenCountdown <= 5 ? 'bg-red-600' : 'bg-blue-600'}`}
-                    style={{ width: `${(fullscreenCountdown / (FULLSCREEN_TIMEOUT_MS / 1000)) * 100}%` }}
-                  />
-                </div>
               </div>
             )}
+
             <button
               onClick={enterFullscreen}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold text-xs transition cursor-pointer"
             >
-              Enter Fullscreen
+              Enter Fullscreen Mode
             </button>
           </div>
         </div>
@@ -542,156 +545,237 @@ const Test = () => {
 
       {/* ── Warning Overlay ── */}
       {showWarningOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
-          <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 text-center">
-            <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-amber-200">
+            <div className="w-14 h-14 bg-amber-50 border border-amber-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7 text-amber-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Warning!</h2>
-            <p className="text-gray-600 text-sm mb-4">
-              Tab or window switch detected. Your exam is locked for 5 seconds.
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Window Switch Detected!</h2>
+            <p className="text-slate-600 text-xs mb-4">
+              Exam interface locked for 5 seconds. Please stay on the assessment window.
             </p>
-            <p className="text-yellow-600 font-semibold text-sm">
-              Warning {warningCount} — Please stay on the exam window.
-            </p>
-            <div className="mt-6 w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-yellow-500 h-2 rounded-full transition-all duration-1000"
-                style={{ width: "100%", animation: `shrink ${WARNING_LOCKOUT_MS}ms linear` }}
-              />
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-800 font-bold text-xs">
+              <span>Warning Record: {warningCount}</span>
             </div>
           </div>
-          <style>{`
-            @keyframes shrink {
-              from { width: 100%; }
-              to { width: 0%; }
-            }
-          `}</style>
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-md p-4 mb-6 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-blue-600">Online Assessment</h1>
-          <div className="flex items-center gap-4">
-            <span className={`text-sm font-bold ${timeLeft !== null && timeLeft < 300 ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
-              Time Left: {formatTime(timeLeft)}
-            </span>
-            <span className="text-yellow-600 text-sm font-medium">
-              Warnings: {warningCount}
-            </span>
-            <span className="text-gray-500 text-sm">
-              Question {currentIndex + 1} of {questions.length}
-            </span>
-          </div>
-        </div>
+      {/* Top Header Bar */}
+      <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 py-3 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          
+          <IdpLogo showTagline={false} />
 
-        <div className="flex gap-6">
-          {/* Question Area */}
-          <div className="flex-1 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-6">
-              Q{currentIndex + 1}. {currentQuestion.question || currentQuestion.text}
-            </h2>
-
-            <div className="space-y-3">
-              {currentQuestion.options.map((option) => (
-                <div
-                  key={option.optionId}
-                  onClick={() => handleAnswer(currentQuestion.questionId, option.optionId)}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition duration-200
-                    ${answers[currentQuestion.questionId] === option.optionId
-                      ? "bg-blue-50 border-blue-500"
-                      : "border-gray-200 hover:bg-gray-50"
-                    }`}
-                >
-                  <span className={`w-8 h-8 flex items-center justify-center rounded-full font-semibold text-sm
-                    ${answers[currentQuestion.questionId] === option.optionId
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600"
-                    }`}>
-                    {option.optionId}
-                  </span>
-                  <span className="text-gray-700">{option.text}</span>
-                </div>
-              ))}
+          {/* Real-Time Metrics Header */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            
+            {/* Proctoring Warning Badge */}
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${
+              warningCount > 0 
+                ? "bg-amber-50 border-amber-300 text-amber-800"
+                : "bg-slate-100 border-slate-200 text-slate-700"
+            }`}>
+              <ShieldAlert className={`w-4 h-4 ${warningCount > 0 ? "text-amber-600" : "text-emerald-600"}`} />
+              <span>Warnings: {warningCount}</span>
             </div>
 
-            <div className="flex justify-between mt-8">
+            {/* Countdown Timer */}
+            <div className={`flex items-center gap-2 px-3.5 py-1 rounded-lg text-sm font-bold font-mono border ${
+              timeLeft !== null && timeLeft < 300 
+                ? "bg-red-50 border-red-300 text-red-600 animate-pulse" 
+                : timeLeft !== null && timeLeft < 600
+                ? "bg-amber-50 border-amber-300 text-amber-700"
+                : "bg-blue-50 border-blue-200 text-blue-800"
+            }`}>
+              <Clock className="w-4 h-4" />
+              <span>{formatTime(timeLeft)}</span>
+            </div>
+
+            {/* Candidate Name */}
+            {candidate.name && (
+              <div className="hidden md:flex items-center gap-2 text-xs text-slate-700 font-semibold pl-2 border-l border-slate-200">
+                <User className="w-3.5 h-3.5 text-blue-600" />
+                <span className="truncate max-w-[120px]">{candidate.name}</span>
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      </header>
+
+      {/* Main Examination View */}
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 my-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Question Card (Left 8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm relative min-h-[420px] flex flex-col justify-between">
+              
+              <div>
+                {/* Question Header */}
+                <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+                      Question {currentIndex + 1} of {questions.length}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">Multiple Choice</span>
+                  </div>
+                  
+                  {answers[currentQuestion?.questionId] && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Answered
+                    </span>
+                  )}
+                </div>
+
+                {/* Question Content */}
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed mb-6">
+                  {currentQuestion?.question || currentQuestion?.text}
+                </h2>
+
+                {/* Options List */}
+                <div className="space-y-3">
+                  {currentQuestion?.options?.map((option) => {
+                    const isSelected = answers[currentQuestion.questionId] === option.optionId;
+                    return (
+                      <div
+                        key={option.optionId}
+                        onClick={() => handleAnswer(currentQuestion.questionId, option.optionId)}
+                        className={`group flex items-center gap-3.5 p-4 rounded-lg border transition cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50/80 border-blue-600 shadow-2xs"
+                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
+                        }`}
+                      >
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition shrink-0 ${
+                            isSelected
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                          }`}
+                        >
+                          {option.optionId}
+                        </div>
+                        <span className={`text-xs sm:text-sm transition ${isSelected ? "text-blue-950 font-semibold" : "text-slate-700"}`}>
+                          {option.text}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex items-center justify-between pt-6 mt-8 border-t border-slate-200">
+                <button
+                  onClick={handlePrevious}
+                  disabled={currentIndex === 0}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous</span>
+                </button>
+
+                <div className="flex items-center gap-3">
+                  {currentIndex === questions.length - 1 ? (
+                    <button
+                      onClick={handleSubmit}
+                      className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
+                    >
+                      <FileCheck2 className="w-4 h-4" />
+                      <span>Review & Submit</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleNext}
+                      className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Question Palette Sidebar (Right 4 cols) */}
+          <div className="lg:col-span-4 space-y-4">
+            
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
+                <span className="text-[11px] font-semibold text-blue-700">{answeredCount}/{questions.length} Answered</span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden border border-slate-200">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+
+              {/* Question Buttons Grid */}
+              <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                {questions.map((q, index) => {
+                  const isCurrent = currentIndex === index;
+                  const isAnswered = !!answers[q.questionId];
+
+                  return (
+                    <button
+                      key={q.questionId}
+                      onClick={() => handlePaletteClick(index)}
+                      className={`h-9 rounded-lg font-bold text-xs transition duration-150 cursor-pointer flex items-center justify-center ${
+                        isCurrent
+                          ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs"
+                          : isAnswered
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Status Legend */}
+              <div className="mt-5 pt-4 border-t border-slate-200 grid grid-cols-3 gap-2 text-[10px] text-slate-600 font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded bg-emerald-600"></div>
+                  <span>Answered</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded bg-blue-600"></div>
+                  <span>Current</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></div>
+                  <span>Unanswered</span>
+                </div>
+              </div>
+
+              {/* Quick Submit */}
               <button
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition disabled:opacity-50"
+                onClick={handleSubmit}
+                className="w-full mt-5 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
               >
-                Previous
+                Submit Exam
               </button>
 
-              {currentIndex === questions.length - 1 ? (
-                <button
-                  onClick={handleSubmit}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
-                >
-                  Review & Submit
-                </button>
-              ) : (
-                <button
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-                >
-                  Next
-                </button>
-              )}
             </div>
+
           </div>
 
-          {/* Question Palette */}
-          <div className="w-48 bg-white rounded-xl shadow-md p-4 h-fit">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Question Palette</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {questions.map((q, index) => (
-                <button
-                  key={q.questionId}
-                  onClick={() => handlePaletteClick(index)}
-                  className={`w-8 h-8 rounded text-sm font-semibold transition
-                    ${currentIndex === index
-                      ? "bg-blue-600 text-white"
-                      : answers[q.questionId]
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
-                <span>Answered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-600 rounded"></div>
-                <span>Current</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gray-100 border rounded"></div>
-                <span>Not Answered</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSubmit}
-              className="w-full mt-6 bg-green-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition"
-            >
-              Submit
-            </button>
-          </div>
         </div>
-      </div>
+      </main>
+
     </div>
   );
 };
