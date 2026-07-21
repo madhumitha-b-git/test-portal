@@ -16,7 +16,7 @@ def register_candidate(name: str, mailId: str, mobile: str, college: str):
 
     return {"success": True, "message": "Registered successfully"}
 
-def submit_answers(name: str, mailId: str, responses: list):
+def submit_answers(name: str, mailId: str, testId: str, responses: list):
     """
     Stores candidate answers in Answers table.
     """
@@ -30,7 +30,7 @@ def submit_answers(name: str, mailId: str, responses: list):
 
     table.put_item(Item={
         "mailId": mailId,
-        "testId": "TEST-001",
+        "testId": testId,
         "durationMinutes": 90,
         "submitTime": submit_time,
         "answers": responses_data

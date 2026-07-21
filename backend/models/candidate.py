@@ -47,4 +47,5 @@ class SubmitRequest(BaseModel):
     """Model for POST /submit request body"""
     name: str
     mailId: str
+    testId: str
     responses: List[AnswerItem]

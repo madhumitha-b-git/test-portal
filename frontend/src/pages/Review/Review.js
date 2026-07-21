@@ -39,10 +39,15 @@ const Review = () => {
       }));
 
       // Call POST /submit API
+      const testId = localStorage.getItem("testId");
+      const mailId = candidate.mailId || candidate.email;
       await submitAnswers({
         name: candidate.name,
-        mailId: candidate.mailId,
-        responses,
+        mailId: mailId,
+        testId: testId,
+        durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+        submitTime: new Date().toISOString(),
+        responses: responses,
       });
 
       // Submit proctoring report with SUCCESS status
@@ -51,9 +56,11 @@ const Review = () => {
       const warningCount = parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10);
 
       submitProctoringReport({
-        mailId: candidate.mailId,
-        startedTime,
-        endedTime,
+        mailId: mailId,
+        testId: testId,
+        durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
+        starttime: startedTime,
+        endtime: endedTime,
         status: "SUCCESS",
         warningCount,
       }).catch(() => {});
