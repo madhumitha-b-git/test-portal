@@ -20,8 +20,8 @@ export const submitAnswers = (data) => API.post("/submit", data);
 // POST /proctoring/session - Start proctoring session
 export const startProctoringSession = (data) => API.post("/proctoring/session", data);
 
-// GET /proctoring/session/{email} - Get session
-export const getProctoringSession = (email) => API.get(`/proctoring/session/${email}`);
+// GET /proctoring/session/{mailId} - Get session
+export const getProctoringSession = (mailId) => API.get(`/proctoring/session/${mailId}`);
 
 // POST /proctoring/warning - Increment warning count
 export const incrementWarning = (data) => API.post("/proctoring/warning", data);

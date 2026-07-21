@@ -34,7 +34,7 @@ const Test = () => {
   const questionsRef = useRef(questions);
 
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
-  const email = candidate.email || "";
+  const mailId = candidate.mailId || "";
 
   // ── Redirect if already submitted ──
   useEffect(() => {
@@ -92,7 +92,7 @@ const Test = () => {
 
   // ── Start proctoring session on mount ──
   useEffect(() => {
-    if (sessionStartedRef.current || !email) return;
+    if (sessionStartedRef.current || !mailId) return;
     sessionStartedRef.current = true;
 
     const startedTime = new Date().toISOString();
@@ -100,8 +100,8 @@ const Test = () => {
     localStorage.setItem("proctoringWarningCount", "0");
     localStorage.setItem("proctoringStatus", "SUCCESS");
 
-    startProctoringSession({ email }).catch(() => {});
-  }, [email]);
+    startProctoringSession({ mailId }).catch(() => {});
+  }, [mailId]);
 
   // ── Terminate session ──
   const terminateSession = useCallback((reason) => {
@@ -128,12 +128,12 @@ const Test = () => {
 
     submitAnswers({
       name: candidate.name,
-      email: candidate.email,
+      mailId: candidate.mailId,
       responses,
     }).catch(() => {});
 
     submitProctoringReport({
-      email,
+      mailId,
       startedTime,
       endedTime,
       status: "TERMINATED",
@@ -148,7 +148,7 @@ const Test = () => {
     localStorage.removeItem("proctoringStatus");
 
     setTimeout(() => navigate("/thankyou", { replace: true }), 2000);
-  }, [email, navigate]);
+  }, [mailId, navigate]);
 
   // ── Handle tab / window returning within 15s ──
   const handleReturnFromAway = useCallback(() => {
@@ -162,7 +162,7 @@ const Test = () => {
         .catch(() => setNeedsFullscreen(true));
     }
 
-    incrementWarning({ email }).then((res) => {
+    incrementWarning({ mailId }).then((res) => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
@@ -175,7 +175,7 @@ const Test = () => {
     lockoutTimerRef.current = setTimeout(() => {
       setShowWarningOverlay(false);
     }, WARNING_LOCKOUT_MS);
-  }, [email]);
+  }, [mailId]);
 
   // ── Start the 15s away countdown ──
   const startAwayCountdown = useCallback(() => {
@@ -232,7 +232,7 @@ const Test = () => {
     if (warningInFlightRef.current) return;
     warningInFlightRef.current = true;
 
-    incrementWarning({ email }).then((res) => {
+    incrementWarning({ mailId }).then((res) => {
       const newCount = res.data.warningCount;
       setWarningCount(newCount);
       localStorage.setItem("proctoringWarningCount", String(newCount));
@@ -242,7 +242,7 @@ const Test = () => {
     }).catch(() => {}).finally(() => {
       warningInFlightRef.current = false;
     });
-  }, [needsFullscreen, isTerminated, email]);
+  }, [needsFullscreen, isTerminated, mailId]);
 
   // ── Fullscreen countdown: terminate if user ignores for 15s ──
   useEffect(() => {

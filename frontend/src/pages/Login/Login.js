@@ -8,7 +8,7 @@ const Login = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    mailId: "",
     mobile: "",
     college: "",
   });
@@ -33,10 +33,10 @@ const Login = () => {
       newErrors.name = "Name is required";
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Enter a valid email";
+    if (!formData.mailId.trim()) {
+      newErrors.mailId = "Mail ID is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.mailId)) {
+      newErrors.mailId = "Enter a valid mail ID";
     }
 
     if (!formData.mobile.trim()) {
@@ -71,7 +71,7 @@ const Login = () => {
       // Store candidate info in localStorage for later use
       localStorage.setItem("candidate", JSON.stringify({
         name: formData.name,
-        email: formData.email,
+        mailId: formData.mailId,
       }));
 
       // Redirect to Instructions page
@@ -119,20 +119,20 @@ const Login = () => {
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
-          {/* Email */}
+          {/* Mail ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
+              Mail ID
             </label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
+              name="mailId"
+              value={formData.mailId}
               onChange={handleChange}
-              placeholder="Enter your email"
+              placeholder="Enter your Mail ID"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            {errors.mailId && <p className="text-red-500 text-xs mt-1">{errors.mailId}</p>}
           </div>
 
           {/* Mobile */}

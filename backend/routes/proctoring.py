@@ -20,16 +20,16 @@ def get_all_sessions():
 @router.post("/session")
 def start_session(request: SessionStartRequest):
     try:
-        result = proctoring_service.start_session(request.email)
+        result = proctoring_service.start_session(request.mailId)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/session/{email}")
-def get_session(email: str):
+@router.get("/session/{mail_id}")
+def get_session(mail_id: str):
     try:
-        result = proctoring_service.get_session(email.lower().strip())
+        result = proctoring_service.get_session(mail_id.lower().strip())
         if not result:
             raise HTTPException(status_code=404, detail="Session not found")
         return result
@@ -42,7 +42,7 @@ def get_session(email: str):
 @router.post("/warning")
 def increment_warning(request: WarningIncrementRequest):
     try:
-        result = proctoring_service.increment_warning(request.email)
+        result = proctoring_service.increment_warning(request.mailId)
         if not result:
             raise HTTPException(status_code=404, detail="Session not found")
         return result
@@ -56,10 +56,10 @@ def increment_warning(request: WarningIncrementRequest):
 def submit_report(request: ProctoringReportRequest):
     try:
         session = proctoring_service.end_session(
-            request.email, request.status
+            request.mailId, request.status
         )
         report = {
-            "email": session["email"],
+            "mailId": session["email"],
             "startedTime": session["startedTime"],
             "endedTime": session["endedTime"],
             "status": session["status"],

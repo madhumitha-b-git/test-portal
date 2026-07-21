@@ -22,10 +22,10 @@ def create_tables():
         dynamodb.create_table(
             TableName="candidate_table",
             KeySchema=[
-                {"AttributeName": "email", "KeyType": "HASH"}
+                {"AttributeName": "mailId", "KeyType": "HASH"}
             ],
             AttributeDefinitions=[
-                {"AttributeName": "email", "AttributeType": "S"}
+                {"AttributeName": "mailId", "AttributeType": "S"}
             ],
             BillingMode="PAY_PER_REQUEST"
         )

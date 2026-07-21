@@ -4,7 +4,7 @@ from typing import List
 class RegisterRequest(BaseModel):
     """Model for POST /register request body"""
     name: str
-    email: str
+    mailId: str
     mobile: str
     college: str
 
@@ -15,11 +15,11 @@ class RegisterRequest(BaseModel):
             raise ValueError("Name cannot be empty")
         return v.strip()
 
-    @field_validator("email")
+    @field_validator("mailId")
     @classmethod
-    def email_must_be_valid(cls, v):
+    def mailId_must_be_valid(cls, v):
         if "@" not in v or "." not in v:
-            raise ValueError("Invalid email address")
+            raise ValueError("Invalid mailId address")
         return v.lower().strip()
 
     @field_validator("mobile")
@@ -46,5 +46,5 @@ class AnswerItem(BaseModel):
 class SubmitRequest(BaseModel):
     """Model for POST /submit request body"""
     name: str
-    email: str
+    mailId: str
     responses: List[AnswerItem]

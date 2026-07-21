@@ -1,20 +1,14 @@
 from database.dynamodb import get_users_table, get_answers_table, get_questions_table
 
-def register_candidate(name: str, email: str, mobile: str, college: str):
+def register_candidate(name: str, mailId: str, mobile: str, college: str):
     """
     Stores candidate details in Users table.
-    Checks if email already exists before inserting.
     """
     table = get_users_table()
 
-    # Check if user already exists
-    response = table.get_item(Key={"email": email})
-    if "Item" in response:
-        return {"success": False, "message": "Email already registered"}
-
-    # Store in DynamoDB
+    # Store in DynamoDB (this will insert or update existing candidate)
     table.put_item(Item={
-        "email": email,
+        "mailId": mailId,
         "name": name,
         "mobile": mobile,
         "college": college
@@ -38,7 +32,7 @@ def get_questions():
 
     return questions
 
-def submit_answers(name: str, email: str, responses: list):
+def submit_answers(name: str, mailId: str, responses: list):
     """
     Stores candidate answers in Answers table.
     """
@@ -51,7 +45,7 @@ def submit_answers(name: str, email: str, responses: list):
     submit_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     table.put_item(Item={
-        "mailId": email,
+        "mailId": mailId,
         "testId": "TEST-001",
         "durationMinutes": 90,
         "submitTime": submit_time,
@@ -72,3 +66,27 @@ def get_answers_by_test_id(test_id: str):
     )
     
     return response.get("Items", [])
+
+def get_candidate_answers(mail_id: str):
+    """
+    Fetches candidate details from users table and their answers from answers table.
+    """
+    users_table = get_users_table()
+    answers_table = get_answers_table()
+    
+    user_resp = users_table.get_item(Key={"mailId": mail_id})
+    ans_resp = answers_table.get_item(Key={"mailId": mail_id})
+    
+    return {
+        "candidate": user_resp.get("Item", {}),
+        "testData": ans_resp.get("Item", {})
+    }
+
+def get_candidate(mail_id: str):
+    """
+    Fetches candidate details from users table.
+    """
+    users_table = get_users_table()
+    user_resp = users_table.get_item(Key={"mailId": mail_id})
+    return user_resp.get("Item", {})
+

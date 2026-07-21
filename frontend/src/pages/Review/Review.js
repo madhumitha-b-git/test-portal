@@ -41,7 +41,7 @@ const Review = () => {
       // Call POST /submit API
       await submitAnswers({
         name: candidate.name,
-        email: candidate.email,
+        mailId: candidate.mailId,
         responses,
       });
 
@@ -51,7 +51,7 @@ const Review = () => {
       const warningCount = parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10);
 
       submitProctoringReport({
-        email: candidate.email,
+        mailId: candidate.mailId,
         startedTime,
         endedTime,
         status: "SUCCESS",
