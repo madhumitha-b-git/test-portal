@@ -90,7 +90,7 @@ const Login = () => {
 
         {/* Header */}
         <h1 className="text-2xl font-bold text-center text-blue-600 mb-2">
-          Online Assessment Portal
+          IDP Assessment Portal
         </h1>
         <p className="text-center text-gray-500 mb-6">Enter your details to continue</p>
 

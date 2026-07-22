@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import candidate, proctoring
 
 # Create FastAPI app instance
-app = FastAPI(title="Online Assessment Portal", version="1.0.0")
+app = FastAPI(title="I Assessment Portal", version="1.0.0")
 
 # CORS - allows React frontend (localhost:3000) to talk to this backend (localhost:8000)
 app.add_middleware(

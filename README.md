@@ -1,4 +1,4 @@
-# Online Assessment Portal — MVP
+# IDP Assessment Portal — MVP
 
 ## Project Structure
 
