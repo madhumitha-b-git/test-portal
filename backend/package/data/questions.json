@@ -1,0 +1,104 @@
+{
+  "questions": [
+    {
+      "questionId": "q001",
+      "text": "What is the time complexity of Binary Search?",
+      "options": [
+        { "optionId": "A", "text": "O(n)" },
+        { "optionId": "B", "text": "O(log n)" },
+        { "optionId": "C", "text": "O(n²)" },
+        { "optionId": "D", "text": "O(1)" }
+      ]
+    },
+    {
+      "questionId": "q002",
+      "text": "Which data structure follows LIFO order?",
+      "options": [
+        { "optionId": "A", "text": "Queue" },
+        { "optionId": "B", "text": "Array" },
+        { "optionId": "C", "text": "Stack" },
+        { "optionId": "D", "text": "Linked List" }
+      ]
+    },
+    {
+      "questionId": "q003",
+      "text": "What does HTML stand for?",
+      "options": [
+        { "optionId": "A", "text": "Hyper Text Markup Language" },
+        { "optionId": "B", "text": "High Tech Modern Language" },
+        { "optionId": "C", "text": "Hyper Transfer Markup Language" },
+        { "optionId": "D", "text": "Home Tool Markup Language" }
+      ]
+    },
+    {
+      "questionId": "q004",
+      "text": "Which keyword is used to create a class in Python?",
+      "options": [
+        { "optionId": "A", "text": "function" },
+        { "optionId": "B", "text": "def" },
+        { "optionId": "C", "text": "class" },
+        { "optionId": "D", "text": "object" }
+      ]
+    },
+    {
+      "questionId": "q005",
+      "text": "What is the output of print(2 ** 3) in Python?",
+      "options": [
+        { "optionId": "A", "text": "6" },
+        { "optionId": "B", "text": "9" },
+        { "optionId": "C", "text": "8" },
+        { "optionId": "D", "text": "5" }
+      ]
+    },
+    {
+      "questionId": "q006",
+      "text": "Which HTTP method is used to send data to a server?",
+      "options": [
+        { "optionId": "A", "text": "GET" },
+        { "optionId": "B", "text": "POST" },
+        { "optionId": "C", "text": "DELETE" },
+        { "optionId": "D", "text": "FETCH" }
+      ]
+    },
+    {
+      "questionId": "q007",
+      "text": "What does CSS stand for?",
+      "options": [
+        { "optionId": "A", "text": "Computer Style Sheets" },
+        { "optionId": "B", "text": "Creative Style System" },
+        { "optionId": "C", "text": "Cascading Style Sheets" },
+        { "optionId": "D", "text": "Colorful Style Sheets" }
+      ]
+    },
+    {
+      "questionId": "q008",
+      "text": "Which of the following is NOT a JavaScript data type?",
+      "options": [
+        { "optionId": "A", "text": "String" },
+        { "optionId": "B", "text": "Boolean" },
+        { "optionId": "C", "text": "Integer" },
+        { "optionId": "D", "text": "Undefined" }
+      ]
+    },
+    {
+      "questionId": "q009",
+      "text": "What is the primary key in a DynamoDB table?",
+      "options": [
+        { "optionId": "A", "text": "Sort Key" },
+        { "optionId": "B", "text": "Foreign Key" },
+        { "optionId": "C", "text": "Partition Key" },
+        { "optionId": "D", "text": "Index Key" }
+      ]
+    },
+    {
+      "questionId": "q010",
+      "text": "Which React hook is used to manage state?",
+      "options": [
+        { "optionId": "A", "text": "useEffect" },
+        { "optionId": "B", "text": "useContext" },
+        { "optionId": "C", "text": "useRef" },
+        { "optionId": "D", "text": "useState" }
+      ]
+    }
+  ]
+}
