@@ -23,6 +23,13 @@ def register_candidate(
 
     table = get_users_table()
 
+    existing_user = table.get_item(Key={"mailId": mailId})
+    if "Item" in existing_user:
+        return {
+            "success": False,
+            "message": "Email already exists"
+        }
+
     table.put_item(
         Item={
             "mailId": mailId,
