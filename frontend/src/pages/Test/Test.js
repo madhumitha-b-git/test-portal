@@ -156,10 +156,8 @@ const Test = () => {
 
     submitProctoringReport({
       mailId: mailId,
-      testId: testId,
-      durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-      starttime: startedTime,
-      endtime: endedTime,
+      startedTime: startedTime,
+      endedTime: endedTime,
       status: "TERMINATED",
       warningCount: count,
     }).catch(() => {});
@@ -385,10 +383,8 @@ const Test = () => {
 
       submitProctoringReport({
         mailId: mailId,
-        testId: testId,
-        durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-        starttime: startedTime,
-        endtime: endedTime,
+        startedTime: startedTime,
+        endedTime: endedTime,
         status: "SUCCESS",
         warningCount: count,
       }).catch(() => {});

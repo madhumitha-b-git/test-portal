@@ -80,15 +80,26 @@ def increment_warning(mailId: str):
     return {"mailId": mailId, "warningCount": new_count}
 
 
-def end_session(mailId: str, status: str):
+def end_session(mailId: str, status: str, startedTime: str = None, endedTime: str = None, warningCount: int = None):
     table = get_proctoring_sessions_table()
-    ended = _now_iso()
+    ended = endedTime or _now_iso()
+
+    update_expr = "SET endedTime = :et, #s = :st"
+    expr_names = {"#s": "status"}
+    expr_vals = {":et": ended, ":st": status}
+
+    if startedTime:
+        update_expr += ", startedTime = :stt"
+        expr_vals[":stt"] = startedTime
+    if warningCount is not None:
+        update_expr += ", warningCount = :wc"
+        expr_vals[":wc"] = warningCount
 
     table.update_item(
         Key={"mailId": mailId},
-        UpdateExpression="SET endedTime = :et, #s = :st",
-        ExpressionAttributeNames={"#s": "status"},
-        ExpressionAttributeValues={":et": ended, ":st": status},
+        UpdateExpression=update_expr,
+        ExpressionAttributeNames=expr_names,
+        ExpressionAttributeValues=expr_vals,
     )
 
     response = table.get_item(Key={"mailId": mailId})

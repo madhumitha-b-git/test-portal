@@ -56,10 +56,13 @@ def increment_warning(request: WarningIncrementRequest):
 def submit_report(request: ProctoringReportRequest):
     try:
         session = proctoring_service.end_session(
-            request.mailId, request.status
+            request.mailId, request.status,
+            startedTime=request.startedTime,
+            endedTime=request.endedTime,
+            warningCount=request.warningCount,
         )
         report = {
-            "mailId": session["email"],
+            "mailId": session["mailId"],
             "startedTime": session["startedTime"],
             "endedTime": session["endedTime"],
             "status": session["status"],
