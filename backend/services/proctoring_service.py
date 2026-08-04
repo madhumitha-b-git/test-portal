@@ -18,7 +18,9 @@ def get_all_sessions():
     items = response.get("Items", [])
     items.sort(key=lambda x: x.get("startedTime", ""), reverse=True)
     return [{
-        "email": item["email"],
+        "email": item.get("mailId", ""),
+        "startedTime": item.get("starttime", ""),
+        "mailId": item.get("mailId", ""),
         "startedTime": item.get("startedTime", ""),
         "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
@@ -26,29 +28,32 @@ def get_all_sessions():
     } for item in items]
 
 
-def start_session(email: str):
+def start_session(mailId: str, testId: str):
     table = get_proctoring_sessions_table()
     started = _now_iso()
 
-    table.put_item(Item={
-        "email": email,
-        "startedTime": started,
-        "endedTime": "",
-        "warningCount": 0,
-        "status": "IN_PROGRESS",
-    })
+    table.put_item(
+        Item={
+            "mailId": mailId,
+            "durationMinutes": 60,
+            "startedTime": started,
+            "endedTime": "",
+            "status": "IN_PROGRESS",
+            "testId": testId,
+            "warningCount": 0,
+        }
+    )
+    return {"mailId": mailId, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
 
-    return {"email": email, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
 
-
-def get_session(email: str):
+def get_session(mailId: str):
     table = get_proctoring_sessions_table()
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": mailId})
     item = response.get("Item")
     if not item:
         return None
     return {
-        "email": item["email"],
+        "mailId": item.get("mailId", mailId),
         "startedTime": item.get("startedTime", ""),
         "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
@@ -56,9 +61,9 @@ def get_session(email: str):
     }
 
 
-def increment_warning(email: str):
+def increment_warning(mailId: str):
     table = get_proctoring_sessions_table()
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": mailId})
     item = response.get("Item")
     if not item:
         return None
@@ -67,30 +72,41 @@ def increment_warning(email: str):
     new_count = current + 1
 
     table.update_item(
-        Key={"email": email},
+        Key={"mailId": mailId},
         UpdateExpression="SET warningCount = :wc",
         ExpressionAttributeValues={":wc": new_count},
     )
 
-    return {"email": email, "warningCount": new_count}
+    return {"mailId": mailId, "warningCount": new_count}
 
 
-def end_session(email: str, status: str):
+def end_session(mailId: str, status: str, startedTime: str = None, endedTime: str = None, warningCount: int = None):
     table = get_proctoring_sessions_table()
-    ended = _now_iso()
+    ended = endedTime or _now_iso()
+
+    update_expr = "SET endedTime = :et, #s = :st"
+    expr_names = {"#s": "status"}
+    expr_vals = {":et": ended, ":st": status}
+
+    if startedTime:
+        update_expr += ", startedTime = :stt"
+        expr_vals[":stt"] = startedTime
+    if warningCount is not None:
+        update_expr += ", warningCount = :wc"
+        expr_vals[":wc"] = warningCount
 
     table.update_item(
-        Key={"email": email},
-        UpdateExpression="SET endedTime = :et, #s = :st",
-        ExpressionAttributeNames={"#s": "status"},
-        ExpressionAttributeValues={":et": ended, ":st": status},
+        Key={"mailId": mailId},
+        UpdateExpression=update_expr,
+        ExpressionAttributeNames=expr_names,
+        ExpressionAttributeValues=expr_vals,
     )
 
-    response = table.get_item(Key={"email": email})
+    response = table.get_item(Key={"mailId": mailId})
     item = response.get("Item", {})
 
     return {
-        "email": item.get("email", email),
+        "mailId": item.get("mailId", mailId),
         "startedTime": item.get("startedTime", ""),
         "endedTime": item.get("endedTime", ended),
         "warningCount": int(item.get("warningCount", 0)),
