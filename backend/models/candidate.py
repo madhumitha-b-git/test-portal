@@ -41,6 +41,7 @@ class AnswerItem(BaseModel):
     """Single question answer"""
     questionId: str
     selectedOption: str = ""
+    typedAnswer: str = ""
 
 
 class SubmitRequest(BaseModel):

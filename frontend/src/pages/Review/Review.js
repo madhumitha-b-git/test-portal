@@ -35,11 +35,21 @@ const Review = () => {
   const handleFinalSubmit = async () => {
     setLoading(true);
     try {
-      // Build responses array
-      const responses = questions.map((q) => ({
-        questionId: q.questionId,
-        selectedOption: answers[q.questionId] || "",
-      }));
+      const responses = questions.map((q) => {
+        if (q.questionType === "CODING") {
+          return {
+            questionId: q.questionId,
+            typedAnswer: answers[q.questionId] || "",
+            selectedOption: "",
+          };
+        } else {
+          return {
+            questionId: q.questionId,
+            selectedOption: answers[q.questionId] || "",
+            typedAnswer: "",
+          };
+        }
+      });
 
       // Call POST /submit API
       const testId = localStorage.getItem("testId");
@@ -168,10 +178,17 @@ const Review = () => {
                   </div>
 
                   {isAnswered ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      Option {answers[q.questionId]}
-                    </span>
+                    q.questionType === "CODING" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Code Submitted
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Option {answers[q.questionId]}
+                      </span>
+                    )
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200">
                       <HelpCircle className="w-3 h-3 text-amber-600" />

@@ -71,6 +71,18 @@ const Login = () => {
       // Call POST /register API
       await registerCandidate(formData);
 
+      // Clear any stale cached test details
+      localStorage.removeItem("questions");
+      localStorage.removeItem("answers");
+      localStorage.removeItem("testId");
+      localStorage.removeItem("totalDurationMinutes");
+      localStorage.removeItem("proctoringStartedTime");
+      localStorage.removeItem("proctoringWarningCount");
+      localStorage.removeItem("proctoringStatus");
+      localStorage.removeItem("testSubmitted");
+      localStorage.removeItem("testTerminated");
+      localStorage.removeItem("terminationReason");
+
       // Store candidate info in localStorage for later use
       localStorage.setItem(
         "candidate",

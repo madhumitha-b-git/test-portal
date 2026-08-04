@@ -1,13 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { ShieldCheck, FileText, Monitor, AlertTriangle, CheckCircle, ArrowRight, Lock } from "lucide-react";
+import { fetchQuestions } from "../../services/api";
 
 const Instructions = () => {
   const navigate = useNavigate();
   const [accepted, setAccepted] = useState(false);
+  const [duration, setDuration] = useState(() => parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10));
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
+
+  useEffect(() => {
+    const loadTestDuration = async () => {
+      try {
+        const cachedDuration = localStorage.getItem("totalDurationMinutes");
+        if (cachedDuration) {
+          setDuration(parseInt(cachedDuration, 10));
+          return;
+        }
+
+        const response = await fetchQuestions();
+        const testDuration = response.data.totalDurationMinutes || 60;
+        setDuration(testDuration);
+
+        // Pre-cache test details to avoid loading states in the test dashboard
+        localStorage.setItem("questions", JSON.stringify(response.data.questions));
+        localStorage.setItem("testId", response.data.testId);
+        localStorage.setItem("totalDurationMinutes", testDuration.toString());
+      } catch (err) {
+        console.error("Failed to load test metadata:", err);
+      }
+    };
+    loadTestDuration();
+  }, []);
 
   const handleStartTest = () => {
     if (!accepted) return;
@@ -42,7 +68,7 @@ const Instructions = () => {
 
             <div className="px-4 py-2 bg-slate-100 rounded-lg border border-slate-200 text-right shrink-0">
               <span className="text-[10px] text-slate-500 uppercase font-semibold block">Total Time</span>
-              <span className="text-base font-bold text-blue-700">60 Minutes</span>
+              <span className="text-base font-bold text-blue-700">{duration} Minutes</span>
             </div>
           </div>
 
@@ -58,11 +84,11 @@ const Instructions = () => {
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>The test consists of <strong>10 multiple choice questions</strong>.</span>
+                  <span>The test contains 2 sections: <strong>10 MCQs</strong> & <strong>2 Coding questions</strong>.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Each question provides 4 options. Select the best answer.</span>
+                  <span>For MCQs, select the best answer. For Coding, write Python code in the IDE.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

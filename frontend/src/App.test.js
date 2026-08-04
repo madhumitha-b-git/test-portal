@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import Footer from './components/Footer';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test('renders footer copyright text', () => {
+  render(<Footer />);
+  const textElement = screen.getByText(/IDP Education Platform/i);
+  expect(textElement).toBeInTheDocument();
 });
