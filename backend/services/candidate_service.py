@@ -48,7 +48,8 @@ def register_candidate(
 def submit_answers(
     mailId: str,
     testId: str,
-    responses: list,
+    submittedAt: str,
+    sections: list,
 ):
     """
     Stores candidate answers in DynamoDB
@@ -58,9 +59,9 @@ def submit_answers(
     table = get_answers_table()
 
     # Convert Pydantic models into plain dictionaries
-    responses_data = [
-        response.model_dump()
-        for response in responses
+    sections_data = [
+        section.model_dump(exclude_none=True)
+        for section in sections
     ]
 
     submit_time = datetime.now(
@@ -72,8 +73,8 @@ def submit_answers(
         Item={
             "mailId": mailId,
             "testId": testId,
-            "responses": responses_data,
-            # "submitTime": submit_time,
+            "sections": sections_data,
+            "submittedAt": submittedAt,
         }
     )
 
@@ -81,7 +82,7 @@ def submit_answers(
     sns_result = publish_test_submitted_event(
         test_id=testId,
         mail_id=mailId,
-        responses=responses_data,
+        responses=sections_data,
     )
 
     return {

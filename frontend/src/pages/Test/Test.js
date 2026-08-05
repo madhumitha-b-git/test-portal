@@ -141,29 +141,35 @@ const Test = () => {
     const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
     const mailId = candidate.mailId || candidate.email;
 
-    const responses = currentQuestions.map((q) => {
-      if (q.questionType === "CODING") {
-        return {
-          questionId: q.questionId,
-          typedAnswer: currentAnswers[q.questionId] || "",
-          selectedOption: "",
-        };
-      } else {
-        return {
-          questionId: q.questionId,
-          selectedOption: currentAnswers[q.questionId] || "",
-          typedAnswer: "",
+    const sectionsMap = {};
+    
+    currentQuestions.forEach((q) => {
+      const sId = q.sectionId || "default";
+      if (!sectionsMap[sId]) {
+        sectionsMap[sId] = {
+          sectionId: sId,
+          responses: []
         };
       }
+      
+      const respObj = { questionId: q.questionId };
+      if (q.questionType === "CODING") {
+        respObj.typedAnswer = currentAnswers[q.questionId] || "";
+      } else {
+        respObj.selectedOption = currentAnswers[q.questionId] || "";
+      }
+      sectionsMap[sId].responses.push(respObj);
     });
+
+    const sections = Object.values(sectionsMap);
 
     submitAnswers({
       name: candidate.name,
       mailId: mailId,
       testId: testId,
       durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-      submitTime: endedTime,
-      responses: responses,
+      submittedAt: endedTime,
+      sections: sections,
     }).catch(() => {});
 
     submitProctoringReport({
@@ -374,30 +380,35 @@ const Test = () => {
       const mailId = candidate.mailId || candidate.email;
       const currentAnswers = answersRef.current;
       const currentQuestions = questionsRef.current;
-
-      const responses = currentQuestions.map((q) => {
-        if (q.questionType === "CODING") {
-          return {
-            questionId: q.questionId,
-            typedAnswer: currentAnswers[q.questionId] || "",
-            selectedOption: "",
-          };
-        } else {
-          return {
-            questionId: q.questionId,
-            selectedOption: currentAnswers[q.questionId] || "",
-            typedAnswer: "",
+      const sectionsMap = {};
+      
+      currentQuestions.forEach((q) => {
+        const sId = q.sectionId || "default";
+        if (!sectionsMap[sId]) {
+          sectionsMap[sId] = {
+            sectionId: sId,
+            responses: []
           };
         }
+        
+        const respObj = { questionId: q.questionId };
+        if (q.questionType === "CODING") {
+          respObj.typedAnswer = currentAnswers[q.questionId] || "";
+        } else {
+          respObj.selectedOption = currentAnswers[q.questionId] || "";
+        }
+        sectionsMap[sId].responses.push(respObj);
       });
+
+      const sections = Object.values(sectionsMap);
 
       await submitAnswers({
         name: candidate.name,
         mailId: mailId,
         testId: testId,
         durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-        submitTime: new Date().toISOString(),
-        responses: responses,
+        submittedAt: new Date().toISOString(),
+        sections: sections,
       });
 
       const startedTime = localStorage.getItem("proctoringStartedTime") || "";

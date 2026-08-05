@@ -44,21 +44,27 @@ const Review = () => {
   const handleFinalSubmit = async () => {
     setLoading(true);
     try {
-      const responses = questions.map((q) => {
-        if (q.questionType === "CODING") {
-          return {
-            questionId: q.questionId,
-            typedAnswer: answers[q.questionId] || "",
-            selectedOption: "",
-          };
-        } else {
-          return {
-            questionId: q.questionId,
-            selectedOption: answers[q.questionId] || "",
-            typedAnswer: "",
+      const sectionsMap = {};
+      
+      questions.forEach((q) => {
+        const sId = q.sectionId || "default";
+        if (!sectionsMap[sId]) {
+          sectionsMap[sId] = {
+            sectionId: sId,
+            responses: []
           };
         }
+        
+        const respObj = { questionId: q.questionId };
+        if (q.questionType === "CODING") {
+          respObj.typedAnswer = answers[q.questionId] || "";
+        } else {
+          respObj.selectedOption = answers[q.questionId] || "";
+        }
+        sectionsMap[sId].responses.push(respObj);
       });
+
+      const sections = Object.values(sectionsMap);
 
       // Call POST /submit API
       const testId = localStorage.getItem("testId");
@@ -68,8 +74,8 @@ const Review = () => {
         mailId: mailId,
         testId: testId,
         durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-        submitTime: new Date().toISOString(),
-        responses: responses,
+        submittedAt: new Date().toISOString(),
+        sections: sections,
       });
 
       // Submit proctoring report with SUCCESS status
