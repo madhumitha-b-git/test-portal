@@ -78,11 +78,12 @@ def submit_answers(
         }
     )
 
-    # Publish the same structure to SNS
+    # Publish the exact structure to SNS
     sns_result = publish_test_submitted_event(
         test_id=testId,
         mail_id=mailId,
-        responses=sections_data,
+        sections=sections_data,
+        submitted_at=submittedAt,
     )
 
     return {
