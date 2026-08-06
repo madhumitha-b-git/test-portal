@@ -11,7 +11,14 @@ const FULLSCREEN_TIMEOUT_MS = 15000;
 const Test = () => {
   const navigate = useNavigate();
 
-  const [questions, setQuestions] = useState(() => JSON.parse(localStorage.getItem("questions") || "[]"));
+  const [questions, setQuestions] = useState(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("questions"));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
   const [loading, setLoading] = useState(true);
@@ -61,8 +68,9 @@ const Test = () => {
         const cachedQuestions = localStorage.getItem("questions");
         if (!cachedQuestions || cachedQuestions === "[]") {
           const response = await fetchQuestions();
-          setQuestions(response.data.questions);
-          localStorage.setItem("questions", JSON.stringify(response.data.questions));
+          const fetchedQuestions = Array.isArray(response.data.questions) ? response.data.questions : [];
+          setQuestions(fetchedQuestions);
+          localStorage.setItem("questions", JSON.stringify(fetchedQuestions));
           
           currentTestId = response.data.testId;
           setTestId(currentTestId);
@@ -102,12 +110,31 @@ const Test = () => {
   }, [email, testId]);
 
   // ── Request fullscreen ──
+  const isDocumentFullscreen = useCallback(() => !!(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement
+  ), []);
+
   const enterFullscreen = useCallback(() => {
-    if (!document.documentElement.requestFullscreen) return Promise.resolve();
-    return document.documentElement.requestFullscreen()
-      .then(() => setNeedsFullscreen(false))
-      .catch(() => setNeedsFullscreen(true));
-  }, []);
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      return el.requestFullscreen()
+        .then(() => setNeedsFullscreen(false))
+        .catch(() => setNeedsFullscreen(!isDocumentFullscreen()));
+    }
+    if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+      setNeedsFullscreen(false);
+      return Promise.resolve();
+    }
+    if (el.mozRequestFullScreen) {
+      el.mozRequestFullScreen();
+      setNeedsFullscreen(false);
+      return Promise.resolve();
+    }
+    return Promise.resolve();
+  }, [isDocumentFullscreen]);
 
   useEffect(() => {
     enterFullscreen().finally(() => {
@@ -117,10 +144,16 @@ const Test = () => {
 
   // ── Track fullscreen state ──
   useEffect(() => {
-    const update = () => setNeedsFullscreen(!document.fullscreenElement);
+    const update = () => setNeedsFullscreen(!isDocumentFullscreen());
     document.addEventListener("fullscreenchange", update);
-    return () => document.removeEventListener("fullscreenchange", update);
-  }, [isTerminated]);
+    document.addEventListener("webkitfullscreenchange", update);
+    document.addEventListener("mozfullscreenchange", update);
+    return () => {
+      document.removeEventListener("fullscreenchange", update);
+      document.removeEventListener("webkitfullscreenchange", update);
+      document.removeEventListener("mozfullscreenchange", update);
+    };
+  }, [isTerminated, isDocumentFullscreen]);
 
   // ── Terminate session ──
   const terminateSession = useCallback((reason) => {
@@ -282,7 +315,7 @@ const Test = () => {
 
   // ── Fullscreen countdown ──
   useEffect(() => {
-    const showCountdown = needsFullscreen && initialFullscreenDoneRef.current && !isTerminated;
+    const showCountdown = needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated;
 
     if (!showCountdown) {
       clearTimeout(fullscreenTimerRef.current);
@@ -311,7 +344,7 @@ const Test = () => {
       clearInterval(fullscreenIntervalRef.current);
       setFullscreenCountdown(null);
     };
-  }, [needsFullscreen, isTerminated, terminateSession]);
+  }, [needsFullscreen, isTerminated, terminateSession, isDocumentFullscreen]);
 
   // ── Restriction handlers ──
   useEffect(() => {
@@ -616,7 +649,7 @@ const Test = () => {
     <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${isCoding ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       
       {/* ── Fullscreen Overlay ── */}
-      {needsFullscreen && initialFullscreenDoneRef.current && !isTerminated && (
+      {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-slate-200">
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
@@ -641,7 +674,10 @@ const Test = () => {
             )}
 
             <button
-              onClick={enterFullscreen}
+              onClick={() => {
+                setNeedsFullscreen(false);
+                enterFullscreen();
+              }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold text-xs transition cursor-pointer"
             >
               Enter Fullscreen Mode
