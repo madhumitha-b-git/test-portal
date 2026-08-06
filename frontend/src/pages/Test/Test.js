@@ -42,6 +42,7 @@ const Test = () => {
   const fullscreenIntervalRef = useRef(null);
   const answersRef = useRef(answers);
   const questionsRef = useRef(questions);
+  const gutterRef = useRef(null);
 
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
   const email = candidate.mailId || candidate.email || "";
@@ -173,29 +174,35 @@ const Test = () => {
     const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
     const mailId = candidate.mailId || candidate.email;
 
-    const responses = currentQuestions.map((q) => {
-      if (q.questionType === "CODING") {
-        return {
-          questionId: q.questionId,
-          typedAnswer: currentAnswers[q.questionId] || "",
-          selectedOption: "",
-        };
-      } else {
-        return {
-          questionId: q.questionId,
-          selectedOption: currentAnswers[q.questionId] || "",
-          typedAnswer: "",
+    const sectionsMap = {};
+    
+    currentQuestions.forEach((q) => {
+      const sId = q.sectionId || "default";
+      if (!sectionsMap[sId]) {
+        sectionsMap[sId] = {
+          sectionId: sId,
+          responses: []
         };
       }
+      
+      const respObj = { questionId: q.questionId };
+      if (q.questionType === "CODING") {
+        respObj.typedAnswer = currentAnswers[q.questionId] || "";
+      } else {
+        respObj.selectedOption = currentAnswers[q.questionId] || "";
+      }
+      sectionsMap[sId].responses.push(respObj);
     });
+
+    const sections = Object.values(sectionsMap);
 
     submitAnswers({
       name: candidate.name,
       mailId: mailId,
       testId: testId,
       durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-      submitTime: endedTime,
-      responses: responses,
+      submittedAt: endedTime,
+      sections: sections,
     }).catch(() => {});
 
     submitProctoringReport({
@@ -406,30 +413,35 @@ const Test = () => {
       const mailId = candidate.mailId || candidate.email;
       const currentAnswers = answersRef.current;
       const currentQuestions = questionsRef.current;
-
-      const responses = currentQuestions.map((q) => {
-        if (q.questionType === "CODING") {
-          return {
-            questionId: q.questionId,
-            typedAnswer: currentAnswers[q.questionId] || "",
-            selectedOption: "",
-          };
-        } else {
-          return {
-            questionId: q.questionId,
-            selectedOption: currentAnswers[q.questionId] || "",
-            typedAnswer: "",
+      const sectionsMap = {};
+      
+      currentQuestions.forEach((q) => {
+        const sId = q.sectionId || "default";
+        if (!sectionsMap[sId]) {
+          sectionsMap[sId] = {
+            sectionId: sId,
+            responses: []
           };
         }
+        
+        const respObj = { questionId: q.questionId };
+        if (q.questionType === "CODING") {
+          respObj.typedAnswer = currentAnswers[q.questionId] || "";
+        } else {
+          respObj.selectedOption = currentAnswers[q.questionId] || "";
+        }
+        sectionsMap[sId].responses.push(respObj);
       });
+
+      const sections = Object.values(sectionsMap);
 
       await submitAnswers({
         name: candidate.name,
         mailId: mailId,
         testId: testId,
         durationMinutes: parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10),
-        submitTime: new Date().toISOString(),
-        responses: responses,
+        submittedAt: new Date().toISOString(),
+        sections: sections,
       });
 
       const startedTime = localStorage.getItem("proctoringStartedTime") || "";
@@ -634,7 +646,7 @@ const Test = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative">
+    <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${isCoding ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       
       {/* ── Fullscreen Overlay ── */}
       {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && (
@@ -698,6 +710,34 @@ const Test = () => {
           
           <IdpLogo showTagline={false} />
 
+          {/* Section Tabs */}
+          <div className="hidden md:flex bg-slate-100 p-1 rounded-lg">
+            <button
+              onClick={() => setCurrentIndex(0)}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                !isCoding
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Section A: Aptitude
+            </button>
+            <button
+              onClick={() => {
+                if (mcqQuestions.length > 0) {
+                  setCurrentIndex(mcqQuestions.length);
+                }
+              }}
+              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                isCoding
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Section B: Coding
+            </button>
+          </div>
+
           {/* Real-Time Metrics Header */}
           <div className="flex items-center gap-3 sm:gap-6">
             
@@ -737,9 +777,9 @@ const Test = () => {
       </header>
 
       {/* Main Examination View */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 my-2">
+      <main className={`max-w-7xl mx-auto w-full p-4 sm:p-6 my-2 ${isCoding ? 'flex-1 flex flex-col min-h-0' : 'flex-1'}`}>
         {isCoding ? (
-          <div className="max-w-5xl mx-auto w-full space-y-6">
+          <div className="w-full flex flex-col h-full space-y-4">
             
             {/* Section Header Card */}
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -778,68 +818,81 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Top Half: Problem Description Card */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Problem Statement</h3>
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
-                  {currentQuestion?.marks || 10} Marks
-                </span>
-              </div>
-              <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
-                {currentQuestion?.question || currentQuestion?.text}
-              </p>
-            </div>
-
-            {/* Bottom Half: Python IDE Card */}
-            <div className="bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col justify-between min-h-[420px] overflow-hidden">
-              {/* IDE Header */}
-              <div className="bg-slate-950 px-5 py-3 border-b border-slate-850 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1.5">
-                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                    <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-400 font-mono ml-3">Python 3.x Editor</span>
-                </div>
-                <button
-                  onClick={() => handleAnswer(currentQuestion.questionId, "")}
-                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded transition cursor-pointer"
-                >
-                  Reset Code
-                </button>
-              </div>
-              
-              {/* Text IDE Editor area */}
-              <div className="flex-1 flex relative font-mono text-xs leading-6 overflow-hidden min-h-[320px]">
-                {/* Line Numbers gutter */}
-                <div className="w-12 bg-slate-950/40 text-slate-600 select-none text-right pr-3 py-4 border-r border-slate-800/60 font-mono text-[11px] leading-6 shrink-0">
-                  {Array.from({ length: Math.max(15, (answers[currentQuestion.questionId] || "").split("\n").length) }).map((_, i) => (
-                    <div key={i}>{i + 1}</div>
-                  ))}
-                </div>
-                
-                {/* Textarea */}
-                <textarea
-                  value={answers[currentQuestion.questionId] || ""}
-                  onChange={(e) => handleAnswer(currentQuestion.questionId, e.target.value)}
-                  placeholder="# Write your Python program here..."
-                  className="flex-1 bg-transparent text-slate-200 p-4 outline-none resize-none font-mono text-[12px] leading-6 h-full overflow-y-auto"
-                  spellCheck="false"
-                />
-              </div>
-
-              {/* Footer status bar */}
-              <div className="bg-slate-950 px-5 py-3 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono">
-                <div>
-                  <span>Status: </span>
-                  <span className={answers[currentQuestion.questionId] ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                    {answers[currentQuestion.questionId] ? "Saved (Draft)" : "Unsaved"}
+            {/* Side-by-side Layout */}
+            <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+              {/* Left Column: Problem Description Card */}
+              <div className="w-full lg:w-5/12 bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
+                  <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Problem Statement</h3>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
+                    {currentQuestion?.marks || 10} Marks
                   </span>
                 </div>
-                <div>
-                  <span>Lines: {(answers[currentQuestion.questionId] || "").split("\n").length}</span>
+                <div className="flex-1 overflow-y-auto">
+                  <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
+                    {currentQuestion?.question || currentQuestion?.text}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: Python IDE Card */}
+              <div className="w-full lg:w-7/12 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col h-full overflow-hidden">
+                {/* IDE Header */}
+                <div className="bg-slate-950 px-5 py-3 border-b border-slate-850 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-400 font-mono ml-3">Python 3.x Editor</span>
+                  </div>
+                  <button
+                    onClick={() => handleAnswer(currentQuestion.questionId, "")}
+                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded transition cursor-pointer"
+                  >
+                    Reset Code
+                  </button>
+                </div>
+                
+                {/* Text IDE Editor area */}
+                <div className="flex-1 flex relative font-mono text-xs leading-6 overflow-hidden">
+                  {/* Line Numbers gutter */}
+                  <div 
+                    ref={gutterRef}
+                    className="w-12 h-full overflow-hidden bg-slate-950/40 text-slate-600 select-none text-right pr-3 py-4 border-r border-slate-800/60 font-mono text-[11px] leading-6 shrink-0"
+                  >
+                    {Array.from({ length: Math.max(15, (answers[currentQuestion.questionId] || "").split("\n").length) }).map((_, i) => (
+                      <div key={i}>{i + 1}</div>
+                    ))}
+                  </div>
+                  
+                  {/* Textarea */}
+                  <textarea
+                    value={answers[currentQuestion.questionId] || ""}
+                    onChange={(e) => handleAnswer(currentQuestion.questionId, e.target.value)}
+                    onScroll={(e) => {
+                      if (gutterRef.current) {
+                        gutterRef.current.scrollTop = e.target.scrollTop;
+                      }
+                    }}
+                    placeholder="# Write your Python program here..."
+                    className="flex-1 bg-transparent text-slate-200 p-4 outline-none resize-none font-mono text-[12px] leading-6 h-full overflow-y-auto"
+                    spellCheck="false"
+                  />
+                </div>
+
+                {/* Footer status bar */}
+                <div className="bg-slate-950 px-5 py-3 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
+                  <div>
+                    <span>Status: </span>
+                    <span className={answers[currentQuestion.questionId] ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                      {answers[currentQuestion.questionId] ? "Saved (Draft)" : "Unsaved"}
+                    </span>
+                  </div>
+                  <div>
+                    <span>Lines: {(answers[currentQuestion.questionId] || "").split("\n").length}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -864,7 +917,7 @@ const Test = () => {
                 {currentIndex === questions.length - 1 ? (
                   <button
                     onClick={handleSubmit}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                   >
                     <FileCheck2 className="w-4 h-4" />
                     <span>Review & Submit</span>

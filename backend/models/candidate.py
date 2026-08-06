@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import List
+from typing import List, Optional
 
 class RegisterRequest(BaseModel):
     """Model for POST /register request body"""
@@ -40,12 +40,17 @@ class RegisterRequest(BaseModel):
 class AnswerItem(BaseModel):
     """Single question answer"""
     questionId: str
-    selectedOption: str = ""
-    typedAnswer: str = ""
+    selectedOption: Optional[str] = None
+    typedAnswer: Optional[str] = None
 
+class SectionResponses(BaseModel):
+    """Group of answers for a section"""
+    sectionId: str
+    responses: List[AnswerItem]
 
 class SubmitRequest(BaseModel):
     """Model for POST /submit request body"""
     mailId: str
     testId: str
-    responses: List[AnswerItem]
+    submittedAt: str = ""
+    sections: List[SectionResponses]

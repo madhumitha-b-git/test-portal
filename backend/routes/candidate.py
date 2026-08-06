@@ -36,7 +36,8 @@ def submit(request: SubmitRequest):
         result = candidate_service.submit_answers(
             mailId=request.mailId,
             testId=request.testId,
-            responses=request.responses
+            submittedAt=request.submittedAt,
+            sections=request.sections
         )
         return result
     except Exception as e:
