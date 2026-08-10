@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Base URL of FastAPI backend
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com",
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,14 +11,81 @@ const API = axios.create({
 // POST /register - Register candidate
 export const registerCandidate = (data) => API.post("/register", data);
 
-// GET /questions - Fetch all questions from Admin API
-export const fetchQuestions = async () => {
-  const res = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
-  const firstTest = res.data.items?.[0] || { sections: [], testId: "" };
+// POST /login - Login candidate
+export const loginCandidate = (data) => API.post("/login", data);
+
+// GET /tests - Fetch single test validation by linkId
+export const fetchTestByLinkId = async (linkId) => {
+  if (!linkId) {
+    return { success: false, error: "NO_LINK_ID", message: "Direct access without a link ID is not permitted." };
+  }
+
+  try {
+    const resList = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
+    const tests = resList.data.items || [];
+    const matchedTest = tests.find((t) => String(t.linkId).trim() === String(linkId).trim());
+
+    if (!matchedTest) {
+      return { success: false, error: "NOT_FOUND", message: `No test found for link ID '${linkId}'.` };
+    }
+
+    // Determine active status: check ONLY 'status'
+    const statusLower = matchedTest.status ? matchedTest.status.toLowerCase().trim() : "";
+    const isActive = statusLower === "active";
+
+    if (!isActive) {
+      return {
+        success: false,
+        error: "NOT_ACTIVE",
+        title: matchedTest.title,
+        message: `The assessment '${matchedTest.title}' is currently not active.`,
+        test: matchedTest,
+      };
+    }
+
+    return {
+      success: true,
+      test: matchedTest,
+      title: matchedTest.title || "Online Assessment",
+    };
+  } catch (error) {
+    console.error("Error verifying test by linkId:", error);
+    return { success: false, error: "API_ERROR", message: "Failed to connect to assessment service. Please check your network." };
+  }
+};
+
+// GET /questions - Fetch questions from Admin API
+export const fetchQuestions = async (linkId) => {
+  let testToUse = null;
+
+  try {
+    if (linkId) {
+      const result = await fetchTestByLinkId(linkId);
+      if (result.success && result.test) {
+        testToUse = result.test;
+      }
+    }
+
+    if (!testToUse) {
+      const resList = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
+      const tests = resList.data.items || [];
+      if (tests.length > 0) {
+        const firstTest = tests[0];
+        const resDetail = await axios.get(`https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/${firstTest.testId}`);
+        testToUse = resDetail.data;
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching questions from Admin API:", error);
+  }
+
+  if (!testToUse) {
+    testToUse = { sections: [], testId: "" };
+  }
   
   // Flatten questions from all sections and inject section metadata
   const flattenedQuestions = [];
-  const sections = firstTest.sections || [];
+  const sections = testToUse.sections || [];
   
   sections.forEach((section) => {
     const qs = section.questions || [];
@@ -32,14 +99,14 @@ export const fetchQuestions = async () => {
     });
   });
 
-  const duration = firstTest.totalDurationMinutes || firstTest.durationMinutes || 60;
+  const duration = testToUse.totalDurationMinutes || testToUse.durationMinutes || 60;
 
   return {
     data: {
       questions: flattenedQuestions,
-      testId: firstTest.testId,
+      testId: testToUse.testId,
       totalDurationMinutes: duration,
-      title: firstTest.title,
+      title: testToUse.title,
     }
   };
 };

@@ -19,8 +19,20 @@ const Test = () => {
       return [];
     }
   });
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = localStorage.getItem("currentIndex");
+    const num = parseInt(saved, 10);
+    return !isNaN(num) && num >= 0 ? num : 0;
+  });
   const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
+
+  useEffect(() => {
+    localStorage.setItem("answers", JSON.stringify(answers));
+  }, [answers]);
+
+  useEffect(() => {
+    localStorage.setItem("currentIndex", currentIndex.toString());
+  }, [currentIndex]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [testId, setTestId] = useState(() => localStorage.getItem("testId") || "");
@@ -67,7 +79,8 @@ const Test = () => {
         // Fetch questions if not cached
         const cachedQuestions = localStorage.getItem("questions");
         if (!cachedQuestions || cachedQuestions === "[]") {
-          const response = await fetchQuestions();
+          const linkId = localStorage.getItem("linkId");
+          const response = await fetchQuestions(linkId);
           const fetchedQuestions = Array.isArray(response.data.questions) ? response.data.questions : [];
           setQuestions(fetchedQuestions);
           localStorage.setItem("questions", JSON.stringify(fetchedQuestions));
@@ -218,6 +231,7 @@ const Test = () => {
     localStorage.setItem("terminationReason", reason);
     localStorage.removeItem("answers");
     localStorage.removeItem("questions");
+    localStorage.removeItem("currentIndex");
     localStorage.removeItem("proctoringStartedTime");
     localStorage.removeItem("proctoringWarningCount");
     localStorage.removeItem("proctoringStatus");
@@ -459,6 +473,7 @@ const Test = () => {
       localStorage.setItem("testSubmitted", "true");
       localStorage.removeItem("answers");
       localStorage.removeItem("questions");
+      localStorage.removeItem("currentIndex");
       localStorage.removeItem("proctoringStartedTime");
       localStorage.removeItem("proctoringWarningCount");
       localStorage.removeItem("proctoringStatus");

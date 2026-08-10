@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from models.candidate import RegisterRequest, SubmitRequest
+from models.candidate import RegisterRequest, LoginRequest, SubmitRequest
 from services import candidate_service
 
 router = APIRouter()
@@ -15,7 +15,28 @@ def register(request: RegisterRequest):
             name=request.name,
             mailId=request.mailId,
             mobile=request.mobile,
-            college=request.college
+            college=request.college,
+            password=request.password,
+        )
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/login")
+def login(request: LoginRequest):
+    """
+    POST /login
+    Authenticates existing candidate and checks submission status
+    """
+    try:
+        result = candidate_service.login_candidate(
+            mailId=request.mailId,
+            password=request.password,
         )
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])

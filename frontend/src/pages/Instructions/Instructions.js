@@ -20,7 +20,8 @@ const Instructions = () => {
           return;
         }
 
-        const response = await fetchQuestions();
+        const linkId = localStorage.getItem("linkId");
+        const response = await fetchQuestions(linkId);
         const testDuration = response.data.totalDurationMinutes || 60;
         setDuration(testDuration);
 
@@ -59,7 +60,7 @@ const Instructions = () => {
                 <span>Assessment Guidelines</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                IDP Assess 360 Examination Instructions
+                {localStorage.getItem("testTitle") ? `${localStorage.getItem("testTitle")} - Examination Instructions` : "IDP Assess 360 Examination Instructions"}
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Read the following rules and instructions carefully before starting your test session.

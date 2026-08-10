@@ -11,18 +11,20 @@ from models.candidate import RegisterRequest, AnswerItem
 class TestCandidateModels(unittest.TestCase):
     
     def test_valid_registration(self):
-        # Test that a valid request passes validation
+        # Test that a valid request passes validation and normalizes email
         data = {
             "name": "Rahul Ganesh",
-            "mailId": "rahul@gmail.com",
+            "mailId": "Rahul@Gmail.com",
             "mobile": "9876543210",
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "secretpassword"
         }
         request = RegisterRequest(**data)
         self.assertEqual(request.name, "Rahul Ganesh")
         self.assertEqual(request.mailId, "rahul@gmail.com")
         self.assertEqual(request.mobile, "9876543210")
         self.assertEqual(request.college, "IDP College")
+        self.assertEqual(request.password, "secretpassword")
 
     def test_invalid_email(self):
         # Test that an invalid email fails validation
@@ -30,7 +32,8 @@ class TestCandidateModels(unittest.TestCase):
             "name": "Rahul Ganesh",
             "mailId": "rahulgmailcom",  # Missing @ and .
             "mobile": "9876543210",
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "secretpassword"
         }
         with self.assertRaises(ValidationError):
             RegisterRequest(**data)
@@ -41,7 +44,8 @@ class TestCandidateModels(unittest.TestCase):
             "name": "Rahul Ganesh",
             "mailId": "rahul@gmail.com",
             "mobile": "98765432",  # Only 8 digits
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "secretpassword"
         }
         with self.assertRaises(ValidationError):
             RegisterRequest(**data)
@@ -52,7 +56,8 @@ class TestCandidateModels(unittest.TestCase):
             "name": "   ",
             "mailId": "rahul@gmail.com",
             "mobile": "9876543210",
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "secretpassword"
         }
         with self.assertRaises(ValidationError):
             RegisterRequest(**data_empty_name)
@@ -61,7 +66,8 @@ class TestCandidateModels(unittest.TestCase):
             "name": "Rahul Ganesh",
             "mailId": "rahul@gmail.com",
             "mobile": "9876543210",
-            "college": ""
+            "college": "",
+            "password": "secretpassword"
         }
         with self.assertRaises(ValidationError):
             RegisterRequest(**data_empty_college)

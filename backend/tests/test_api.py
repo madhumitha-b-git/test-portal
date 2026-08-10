@@ -26,7 +26,8 @@ class TestCandidateAPI(unittest.TestCase):
             "name": "Moul",
             "mailId": "moul@gmail.com",
             "mobile": "9876543210",
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "password123"
         }
         
         response = self.client.post("/register", json=payload)
@@ -36,7 +37,8 @@ class TestCandidateAPI(unittest.TestCase):
             name="Moul",
             mailId="moul@gmail.com",
             mobile="9876543210",
-            college="IDP College"
+            college="IDP College",
+            password="password123"
         )
 
     @patch("routes.candidate.candidate_service.register_candidate")
@@ -51,7 +53,8 @@ class TestCandidateAPI(unittest.TestCase):
             "name": "Moul",
             "mailId": "moul@gmail.com",
             "mobile": "9876543210",
-            "college": "IDP College"
+            "college": "IDP College",
+            "password": "password123"
         }
         
         response = self.client.post("/register", json=payload)
@@ -64,7 +67,8 @@ class TestCandidateAPI(unittest.TestCase):
             "name": "",
             "mailId": "invalid-email",
             "mobile": "123",  # Not 10 digits
-            "college": ""
+            "college": "",
+            "password": ""
         }
         
         response = self.client.post("/register", json=payload)
@@ -81,16 +85,22 @@ class TestCandidateAPI(unittest.TestCase):
         payload = {
             "mailId": "moul@gmail.com",
             "testId": "BIT-2026-TEST",
-            "responses": [
+            "submittedAt": "2026-08-10T00:00:00Z",
+            "sections": [
                 {
-                    "questionId": "Q691",
-                    "selectedOption": "C",
-                    "typedAnswer": ""
-                },
-                {
-                    "questionId": "Q646",
-                    "selectedOption": "",
-                    "typedAnswer": "print('hello')"
+                    "sectionId": "sec1",
+                    "responses": [
+                        {
+                            "questionId": "Q691",
+                            "selectedOption": "C",
+                            "typedAnswer": ""
+                        },
+                        {
+                            "questionId": "Q646",
+                            "selectedOption": "",
+                            "typedAnswer": "print('hello')"
+                        }
+                    ]
                 }
             ]
         }

@@ -6,18 +6,59 @@ import Test from "./pages/Test/Test";
 import Review from "./pages/Review/Review";
 import ThankYou from "./pages/ThankYou/ThankYou";
 
-function AuthGuard({ children }) {
-  const candidate = localStorage.getItem("candidate");
-  if (!candidate) {
-    return <Navigate to="/" replace />;
+function LoginGuard({ children }) {
+  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
+
+  if (isSubmitted) {
+    return <Navigate to="/thankyou" replace />;
+  }
+  if (hasActiveSession) {
+    return <Navigate to="/test" replace />;
   }
   return children;
 }
 
-function SubmittedGuard({ children }) {
-  const location = useLocation();
-  if (localStorage.getItem("testSubmitted") === "true" && location.pathname !== "/thankyou") {
+function InstructionsGuard({ children }) {
+  const candidate = localStorage.getItem("candidate");
+  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
+
+  if (!candidate) {
+    return <Navigate to="/" replace />;
+  }
+  if (isSubmitted) {
     return <Navigate to="/thankyou" replace />;
+  }
+  if (hasActiveSession) {
+    return <Navigate to="/test" replace />;
+  }
+  return children;
+}
+
+function TestGuard({ children }) {
+  const candidate = localStorage.getItem("candidate");
+  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+
+  if (!candidate) {
+    return <Navigate to="/" replace />;
+  }
+  if (isSubmitted) {
+    return <Navigate to="/thankyou" replace />;
+  }
+  return children;
+}
+
+function ThankYouGuard({ children }) {
+  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const isTerminated = localStorage.getItem("testTerminated") === "true";
+  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
+
+  if (!isSubmitted && !isTerminated) {
+    if (hasActiveSession) {
+      return <Navigate to="/test" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -25,15 +66,14 @@ function SubmittedGuard({ children }) {
 function App() {
   return (
     <Router>
-      <SubmittedGuard>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/instructions" element={<AuthGuard><Instructions /></AuthGuard>} />
-          <Route path="/test" element={<AuthGuard><Test /></AuthGuard>} />
-          <Route path="/review" element={<AuthGuard><Review /></AuthGuard>} />
-          <Route path="/thankyou" element={<AuthGuard><ThankYou /></AuthGuard>} />
-        </Routes>
-      </SubmittedGuard>
+      <Routes>
+        <Route path="/" element={<LoginGuard><Login /></LoginGuard>} />
+        <Route path="/:linkId" element={<LoginGuard><Login /></LoginGuard>} />
+        <Route path="/instructions" element={<InstructionsGuard><Instructions /></InstructionsGuard>} />
+        <Route path="/test" element={<TestGuard><Test /></TestGuard>} />
+        <Route path="/review" element={<TestGuard><Review /></TestGuard>} />
+        <Route path="/thankyou" element={<ThankYouGuard><ThankYou /></ThankYouGuard>} />
+      </Routes>
     </Router>
   );
 }
