@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import candidate, proctoring
+from routes import candidate, proctoring, execution
 
 # Create FastAPI app instance
 app = FastAPI(title="Online Assessment Portal", version="1.0.0")
@@ -31,6 +31,7 @@ app.add_middleware(
 # Register all routes
 app.include_router(candidate.router)
 app.include_router(proctoring.router)
+app.include_router(execution.router)
 
 @app.get("/")
 def health_check():

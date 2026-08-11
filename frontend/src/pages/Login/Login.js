@@ -125,6 +125,43 @@ const Login = () => {
     setErrors({ ...errors, [e.target.name]: "", api: "" });
   };
 
+  // Strict list of allowed email domains for candidate registration & login
+  const ALLOWED_EMAIL_DOMAINS = new Set([
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "ritchennai.edu.in",
+    "rajalakshmi.edu.in",
+    "bitsathy.ac.in",
+  ]);
+
+  // Email format & domain validator (strictly allows only the 6 approved domains)
+  const isValidEmail = (email) => {
+    const trimmed = (email || "").trim();
+    if (!trimmed) return false;
+
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!emailRegex.test(trimmed) || trimmed.includes("..")) {
+      return false;
+    }
+
+    const parts = trimmed.split("@");
+    if (parts.length !== 2) return false;
+    const domain = parts[1].toLowerCase();
+
+    return ALLOWED_EMAIL_DOMAINS.has(domain);
+  };
+
+  // Password complexity validator for Signup (8+ chars, uppercase, lowercase, number, special char)
+  const isValidPasswordComplexity = (password) => {
+    if (!password || password.length < 8) return false;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+    return hasUpper && hasLower && hasNumber && hasSpecial;
+  };
+
   // Switch tab helper
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
@@ -134,20 +171,21 @@ const Login = () => {
   // Validate registration form
   const validateRegister = () => {
     const newErrors = {};
+    const email = (regData.mailId || "").trim();
 
     if (!regData.name.trim()) {
       newErrors.name = "Full name is required";
     }
 
-    if (!regData.mailId.trim()) {
-      newErrors.mailId = "Mail ID is required";
-    } else if (!/\S+@\S+\.\S+/.test(regData.mailId)) {
-      newErrors.mailId = "Enter a valid email address";
+    if (!email) {
+      newErrors.mailId = "Email address is required";
+    } else if (!isValidEmail(email)) {
+      newErrors.mailId = "Please enter a valid email address";
     }
 
     if (!regData.mobile.trim()) {
       newErrors.mobile = "Mobile number is required";
-    } else if (!/^\d{10}$/.test(regData.mobile)) {
+    } else if (!/^\d{10}$/.test(regData.mobile.trim())) {
       newErrors.mobile = "Mobile number must be exactly 10 digits";
     }
 
@@ -157,11 +195,13 @@ const Login = () => {
 
     if (!regData.password) {
       newErrors.password = "Password is required";
-    } else if (regData.password.length < 4) {
-      newErrors.password = "Password must be at least 4 characters";
+    } else if (!isValidPasswordComplexity(regData.password)) {
+      newErrors.password = "Password must contain at least 8 characters, including uppercase, lowercase, number and special character.";
     }
 
-    if (regData.password !== regData.confirmPassword) {
+    if (!regData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (regData.password !== regData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
@@ -171,11 +211,12 @@ const Login = () => {
   // Validate login form
   const validateLogin = () => {
     const newErrors = {};
+    const email = (loginData.mailId || "").trim();
 
-    if (!loginData.mailId.trim()) {
-      newErrors.mailId = "Mail ID is required";
-    } else if (!/\S+@\S+\.\S+/.test(loginData.mailId)) {
-      newErrors.mailId = "Enter a valid email address";
+    if (!email) {
+      newErrors.mailId = "Email address is required";
+    } else if (!isValidEmail(email)) {
+      newErrors.mailId = "Please enter a valid email address";
     }
 
     if (!loginData.password) {
@@ -290,8 +331,7 @@ const Login = () => {
         navigate("/instructions");
       }
     } catch (error) {
-      const message = error.response?.data?.detail || "Login failed. Please verify your email and password.";
-      setErrors({ api: message });
+      setErrors({ api: "Invalid email or password." });
     } finally {
       setLoading(false);
     }
@@ -543,7 +583,7 @@ const Login = () => {
                           name="name"
                           value={regData.name}
                           onChange={handleRegChange}
-                          placeholder="e.g. Rahul Ganesh"
+                          placeholder="Enter your Name..."
                           className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                             errors.name
                               ? "border-red-400 focus:ring-red-100"
@@ -566,7 +606,7 @@ const Login = () => {
                           name="mailId"
                           value={regData.mailId}
                           onChange={handleRegChange}
-                          placeholder="name@example.com"
+                          placeholder="Enter your Mail Id"
                           className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                             errors.mailId
                               ? "border-red-400 focus:ring-red-100"
@@ -637,7 +677,7 @@ const Login = () => {
                             name="password"
                             value={regData.password}
                             onChange={handleRegChange}
-                            placeholder="Min 4 chars"
+                            placeholder="Min 6 chars"
                             className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                               errors.password
                                 ? "border-red-400 focus:ring-red-100"
@@ -724,7 +764,7 @@ const Login = () => {
                           name="mailId"
                           value={loginData.mailId}
                           onChange={handleLoginChange}
-                          placeholder="name@example.com"
+                          placeholder="Enter registered mail Id"
                           className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition ${
                             errors.mailId
                               ? "border-red-400 focus:ring-red-100"

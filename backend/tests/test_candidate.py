@@ -26,17 +26,55 @@ class TestCandidateModels(unittest.TestCase):
         self.assertEqual(request.college, "IDP College")
         self.assertEqual(request.password, "secretpassword")
 
-    def test_invalid_email(self):
-        # Test that an invalid email fails validation
-        data = {
-            "name": "Rahul Ganesh",
-            "mailId": "rahulgmailcom",  # Missing @ and .
-            "mobile": "9876543210",
-            "college": "IDP College",
-            "password": "secretpassword"
-        }
-        with self.assertRaises(ValidationError):
-            RegisterRequest(**data)
+    def test_allowed_email_domains(self):
+        # Test all 6 allowed email domains (case-insensitive)
+        allowed_emails = [
+            "student@gmail.com",
+            "user@yahoo.com",
+            "test@outlook.com",
+            "rahul@ritchennai.edu.in",
+            "candidate@rajalakshmi.edu.in",
+            "student@bitsathy.ac.in",
+            "UPPERCASE@GMAIL.COM",
+            "Mixed@RitChennai.Edu.In",
+        ]
+        for email in allowed_emails:
+            data = {
+                "name": "Test Student",
+                "mailId": email,
+                "mobile": "9876543210",
+                "college": "IDP College",
+                "password": "secretpassword"
+            }
+            req = RegisterRequest(**data)
+            self.assertEqual(req.mailId, email.lower().strip())
+
+    def test_disallowed_email_domains(self):
+        # Test that typos and unapproved domains fail validation
+        invalid_emails = [
+            "student@gmal.com",
+            "student@gmial.com",
+            "student@gmail.om",
+            "student@gmail.co",
+            "student@outlok.com",
+            "student@yahoo.co",
+            "student@ritchennai.com",
+            "student@customdomain.com",
+            "student@othercollege.edu.in",
+            "invalidemailformat",
+            "student@",
+            "@gmail.com",
+        ]
+        for email in invalid_emails:
+            data = {
+                "name": "Test Student",
+                "mailId": email,
+                "mobile": "9876543210",
+                "college": "IDP College",
+                "password": "secretpassword"
+            }
+            with self.assertRaises(ValidationError, msg=f"Email '{email}' should have been rejected"):
+                RegisterRequest(**data)
 
     def test_invalid_mobile_digits(self):
         # Test that mobile number not matching 10 digits fails validation

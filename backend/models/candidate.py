@@ -1,6 +1,24 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import List, Optional
 
+ALLOWED_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "ritchennai.edu.in",
+    "rajalakshmi.edu.in",
+    "bitsathy.ac.in",
+}
+
+def is_valid_email_domain(email: str) -> bool:
+    email_clean = (email or "").strip().lower()
+    if "@" not in email_clean:
+        return False
+    parts = email_clean.split("@")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        return False
+    return parts[1] in ALLOWED_EMAIL_DOMAINS
+
 class RegisterRequest(BaseModel):
     """Model for POST /register request body"""
     name: str
@@ -19,8 +37,8 @@ class RegisterRequest(BaseModel):
     @field_validator("mailId")
     @classmethod
     def mailId_must_be_valid(cls, v):
-        if "@" not in v or "." not in v:
-            raise ValueError("Invalid mailId address")
+        if not is_valid_email_domain(v):
+            raise ValueError("Email domain must be one of: gmail.com, yahoo.com, outlook.com, ritchennai.edu.in, rajalakshmi.edu.in, bitsathy.ac.in")
         return v.lower().strip()
 
     @field_validator("mobile")
@@ -53,8 +71,8 @@ class LoginRequest(BaseModel):
     @field_validator("mailId")
     @classmethod
     def mailId_must_be_valid(cls, v):
-        if "@" not in v or "." not in v:
-            raise ValueError("Invalid mailId address")
+        if not is_valid_email_domain(v):
+            raise ValueError("Email domain must be one of: gmail.com, yahoo.com, outlook.com, ritchennai.edu.in, rajalakshmi.edu.in, bitsathy.ac.in")
         return v.lower().strip()
 
     @field_validator("password")

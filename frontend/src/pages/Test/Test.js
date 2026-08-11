@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchQuestions, startProctoringSession, incrementWarning, submitAnswers, submitProctoringReport } from "../../services/api";
+import { runPythonCode } from "../../services/codeExecution";
 import IdpLogo from "../../components/IdpLogo";
-import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, FileCheck2, User } from "lucide-react";
+import PythonEditor from "../../components/PythonEditor";
+import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, FileCheck2, User, Play, Terminal, Loader2 } from "lucide-react";
 
 const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
@@ -25,6 +27,56 @@ const Test = () => {
     return !isNaN(num) && num >= 0 ? num : 0;
   });
   const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
+  const [executionMap, setExecutionMap] = useState({});
+  const [showOutputMap, setShowOutputMap] = useState({});
+
+  const handleRunCode = async (questionId) => {
+    if (!questionId) return;
+    setShowOutputMap((prev) => ({ ...prev, [questionId]: true }));
+    const code = answers[questionId] || "";
+    if (!code.trim()) {
+      setExecutionMap((prev) => ({
+        ...prev,
+        [questionId]: {
+          isRunning: false,
+          status: "empty",
+          output: "Please enter Python code before running.",
+        },
+      }));
+      return;
+    }
+
+    setExecutionMap((prev) => ({
+      ...prev,
+      [questionId]: {
+        isRunning: true,
+        status: "running",
+        output: null,
+      },
+    }));
+
+    try {
+      const res = await runPythonCode(code);
+      setExecutionMap((prev) => ({
+        ...prev,
+        [questionId]: {
+          isRunning: false,
+          status: res.status,
+          output: res.output,
+          executionTimeMs: res.executionTimeMs,
+        },
+      }));
+    } catch (err) {
+      setExecutionMap((prev) => ({
+        ...prev,
+        [questionId]: {
+          isRunning: false,
+          status: "error",
+          output: "Execution service error. Please try again.",
+        },
+      }));
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem("answers", JSON.stringify(answers));
@@ -54,7 +106,6 @@ const Test = () => {
   const fullscreenIntervalRef = useRef(null);
   const answersRef = useRef(answers);
   const questionsRef = useRef(questions);
-  const gutterRef = useRef(null);
 
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
   const email = candidate.mailId || candidate.email || "";
@@ -364,8 +415,24 @@ const Test = () => {
   useEffect(() => {
     if (isTerminated) return;
 
-    const blockCopyPaste = (e) => {
-      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "a", "u"].includes(e.key.toLowerCase())) {
+    const blockCopyPasteAndZoom = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        const key = e.key.toLowerCase();
+        // Block zoom shortcuts (Ctrl +, Ctrl -, Ctrl 0, Ctrl =)
+        if (["+", "-", "=", "_", "0"].includes(key) || e.code === "Equal" || e.code === "Minus" || e.code === "Digit0") {
+          e.preventDefault();
+          return false;
+        }
+        // Block copy, paste, cut, select all, view source
+        if (["c", "v", "x", "a", "u"].includes(key)) {
+          e.preventDefault();
+          return false;
+        }
+      }
+    };
+
+    const blockWheelZoom = (e) => {
+      if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         return false;
       }
@@ -390,7 +457,8 @@ const Test = () => {
     const blockPaste = (e) => e.preventDefault();
     const blockCopy = (e) => e.preventDefault();
 
-    document.addEventListener("keydown", blockCopyPaste);
+    document.addEventListener("keydown", blockCopyPasteAndZoom);
+    document.addEventListener("wheel", blockWheelZoom, { passive: false });
     document.addEventListener("keydown", blockFunctionKeys);
     document.addEventListener("contextmenu", blockRightClick);
     document.addEventListener("cut", blockCut);
@@ -398,7 +466,8 @@ const Test = () => {
     document.addEventListener("copy", blockCopy);
 
     return () => {
-      document.removeEventListener("keydown", blockCopyPaste);
+      document.removeEventListener("keydown", blockCopyPasteAndZoom);
+      document.removeEventListener("wheel", blockWheelZoom);
       document.removeEventListener("keydown", blockFunctionKeys);
       document.removeEventListener("contextmenu", blockRightClick);
       document.removeEventListener("cut", blockCut);
@@ -856,59 +925,111 @@ const Test = () => {
                 <div className="bg-slate-950 px-5 py-3 border-b border-slate-850 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      {/* <span className="w-3 h-3 rounded-full bg-red-500"></span>
                       <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                      <span className="w-3 h-3 rounded-full bg-green-500"></span> */}
                     </div>
-                    <span className="text-xs font-semibold text-slate-400 font-mono ml-3">Python 3.x Editor</span>
+                    <span className="text-xs font-semibold text-slate-400 font-mono ml-3">Python</span>
                   </div>
-                  <button
-                    onClick={() => handleAnswer(currentQuestion.questionId, "")}
-                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded transition cursor-pointer"
-                  >
-                    Reset Code
-                  </button>
                 </div>
                 
-                {/* Text IDE Editor area */}
-                <div className="flex-1 flex relative font-mono text-xs leading-6 overflow-hidden">
-                  {/* Line Numbers gutter */}
-                  <div 
-                    ref={gutterRef}
-                    className="w-12 h-full overflow-hidden bg-slate-950/40 text-slate-600 select-none text-right pr-3 py-4 border-r border-slate-800/60 font-mono text-[11px] leading-6 shrink-0"
-                  >
-                    {Array.from({ length: Math.max(15, (answers[currentQuestion.questionId] || "").split("\n").length) }).map((_, i) => (
-                      <div key={i}>{i + 1}</div>
-                    ))}
-                  </div>
-                  
-                  {/* Textarea */}
-                  <textarea
+                {/* Python Monaco Editor area */}
+                <div className="flex-1 relative overflow-hidden">
+                  <PythonEditor
                     value={answers[currentQuestion.questionId] || ""}
-                    onChange={(e) => handleAnswer(currentQuestion.questionId, e.target.value)}
-                    onScroll={(e) => {
-                      if (gutterRef.current) {
-                        gutterRef.current.scrollTop = e.target.scrollTop;
-                      }
-                    }}
-                    placeholder="# Write your Python program here..."
-                    className="flex-1 bg-transparent text-slate-200 p-4 outline-none resize-none font-mono text-[12px] leading-6 h-full overflow-y-auto"
-                    spellCheck="false"
+                    onChange={(val) => handleAnswer(currentQuestion.questionId, val)}
                   />
                 </div>
 
-                {/* Footer status bar */}
-                <div className="bg-slate-950 px-5 py-3 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
-                  <div>
-                    <span>Status: </span>
-                    <span className={answers[currentQuestion.questionId] ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                      {answers[currentQuestion.questionId] ? "Saved (Draft)" : "Unsaved"}
-                    </span>
+                {/* Footer status bar & Run Code Action */}
+                <div className="bg-slate-950 px-5 py-2.5 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span>Status: </span>
+                      <span className={answers[currentQuestion?.questionId] ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                        {answers[currentQuestion?.questionId] ? "Saved (Draft)" : "Unsaved"}
+                      </span>
+                    </div>
+                    <div>
+                      <span>Lines: {(answers[currentQuestion?.questionId] || "").split("\n").length}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span>Lines: {(answers[currentQuestion.questionId] || "").split("\n").length}</span>
-                  </div>
+
+                  <button
+                    onClick={() => handleRunCode(currentQuestion?.questionId)}
+                    disabled={executionMap[currentQuestion?.questionId]?.isRunning}
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-md font-sans text-xs font-bold transition cursor-pointer ${
+                      executionMap[currentQuestion?.questionId]?.isRunning
+                        ? "bg-slate-800 text-slate-400 cursor-not-allowed"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                    }`}
+                  >
+                    {executionMap[currentQuestion?.questionId]?.isRunning ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Running...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Run Code</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* Output Panel (visible only after Run Code is clicked for the current question) */}
+                {showOutputMap[currentQuestion?.questionId] && (
+                  <div className="bg-slate-950 border-t border-slate-850 p-4 flex flex-col h-[150px] shrink-0 font-mono text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-2 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Output</span>
+                        {executionMap[currentQuestion?.questionId]?.executionTimeMs > 0 && (
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            ({executionMap[currentQuestion?.questionId]?.executionTimeMs}ms)
+                          </span>
+                        )}
+                      </div>
+                      {executionMap[currentQuestion?.questionId]?.status === "error" && (
+                        <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded">
+                          Execution Error
+                        </span>
+                      )}
+                      {executionMap[currentQuestion?.questionId]?.status === "success" && (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">
+                          Success
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Output Content Area */}
+                    <div className="flex-1 overflow-y-auto leading-relaxed">
+                      {executionMap[currentQuestion?.questionId]?.isRunning ? (
+                        <div className="flex items-center gap-2 text-slate-400 animate-pulse py-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                          <span>Running Python program...</span>
+                        </div>
+                      ) : executionMap[currentQuestion?.questionId]?.status === "error" ? (
+                        <pre className="text-red-400 whitespace-pre-wrap font-mono text-[11px]">
+                          {executionMap[currentQuestion?.questionId]?.output}
+                        </pre>
+                      ) : executionMap[currentQuestion?.questionId]?.status === "empty" ? (
+                        <p className="text-amber-400 text-[11px]">
+                          {executionMap[currentQuestion?.questionId]?.output}
+                        </p>
+                      ) : executionMap[currentQuestion?.questionId]?.output ? (
+                        <pre className="text-slate-200 whitespace-pre-wrap font-mono text-[11px]">
+                          {executionMap[currentQuestion?.questionId]?.output}
+                        </pre>
+                      ) : (
+                        <p className="text-slate-500 italic text-[11px]">
+                          Run your Python code to see the output.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
