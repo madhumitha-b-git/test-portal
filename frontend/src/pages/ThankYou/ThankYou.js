@@ -1,13 +1,31 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import IdpLogo from "../../components/IdpLogo";
 import Footer from "../../components/Footer";
-import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock, LogOut } from "lucide-react";
 
 const ThankYou = () => {
+  const navigate = useNavigate();
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
   const isTerminated = localStorage.getItem("testTerminated") === "true";
   const terminationReason = localStorage.getItem("terminationReason") || "";
   const submissionTime = new Date().toLocaleString();
+
+  useEffect(() => {
+    // Clear test response & session cache from browser storage upon landing on ThankYou
+    localStorage.removeItem("answers");
+    localStorage.removeItem("questions");
+    localStorage.removeItem("currentIndex");
+    localStorage.removeItem("proctoringStartedTime");
+    localStorage.removeItem("proctoringWarningCount");
+    localStorage.removeItem("proctoringStatus");
+    localStorage.removeItem("totalDurationMinutes");
+  }, []);
+
+  const handleExitPortal = () => {
+    localStorage.clear();
+    navigate("/", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
@@ -46,7 +64,7 @@ const ThankYou = () => {
 
           <p className="text-xs sm:text-sm text-slate-600 mb-6 max-w-md mx-auto">
             {!isTerminated
-              ? "Thank you for completing your assessment on IDP Assess 360. Your answers have been safely recorded."
+              ? "Thank you for completing your assessment on Hire360. Your answers have been safely recorded."
               : terminationReason || "Your assessment session has been submitted."}
           </p>
 
@@ -85,9 +103,18 @@ const ThankYou = () => {
             </div>
           </div>
 
-          <p className="text-[11px] text-slate-500 font-medium">
-            You may now close this browser window.
-          </p>
+          <div className="space-y-3">
+            <button
+              onClick={handleExitPortal}
+              className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Exit Portal</span>
+            </button>
+            <p className="text-[11px] text-slate-500 font-medium">
+              You may also close this browser window.
+            </p>
+          </div>
 
         </div>
       </main>

@@ -10,7 +10,7 @@ const Footer = () => {
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-blue-600" />
           <span>
-            © {new Date().getFullYear()} <strong className="text-slate-800 font-semibold">IDP Assess 360</strong>. All rights reserved. IDP Education Platform.
+            © {new Date().getFullYear()} <strong className="text-slate-800 font-semibold">Hire360</strong>. All rights reserved. IDP Education Platform.
           </span>
         </div>
 

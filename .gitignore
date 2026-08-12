@@ -24,6 +24,8 @@ ENV/
 .ruff_cache/
 __pycache__
 /%SystemDrive%/
+./%SystemDrive%/
+backend/%SystemDrive%/
 
 # =========================
 # FastAPI / Python project

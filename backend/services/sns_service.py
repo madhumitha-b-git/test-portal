@@ -41,7 +41,9 @@ def publish_test_submitted_event(
     mapped_sections = []
     for sec_id, responses in merged_sections.items():
         section_name = "MCQ"
-        if len(responses) > 0 and "typedAnswer" in responses[0]:
+        if "DESCRIPTIVE" in str(sec_id).upper():
+            section_name = "DESCRIPTIVE"
+        elif len(responses) > 0 and "typedAnswer" in responses[0]:
             section_name = "CODING"
             
         mapped_sections.append({

@@ -27,7 +27,7 @@ const IdpLogo = ({ className = "h-9", showTagline = true }) => {
             IDP
           </span>
           <span className="font-bold tracking-tight text-lg text-blue-600">
-            Assess
+            Hire
           </span>
           <span className="bg-blue-600 text-white font-extrabold text-xs px-1.5 py-0.5 rounded shadow-sm">
             360

@@ -60,7 +60,7 @@ const Instructions = () => {
                 <span>Assessment Guidelines</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                {localStorage.getItem("testTitle") ? `${localStorage.getItem("testTitle")} - Examination Instructions` : "IDP Assess 360 Examination Instructions"}
+                {localStorage.getItem("testTitle") ? `${localStorage.getItem("testTitle")} - Examination Instructions` : "Hire360 Examination Instructions"}
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Read the following rules and instructions carefully before starting your test session.
@@ -85,11 +85,11 @@ const Instructions = () => {
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>The test contains 2 sections: <strong>10 MCQs</strong> & <strong>2 Coding questions</strong>.</span>
+                  <span>The test contains 3 sections: <strong>10 MCQs</strong>, <strong>2 Coding questions</strong>, & <strong>2 Descriptive Notepad tasks</strong>.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>For MCQs, select the best answer. For Coding, write Python code in the IDE.</span>
+                  <span>For MCQs select your choice, for Coding use the Python IDE, and for Descriptive write in the auto-saved Notepad.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -155,7 +155,7 @@ const Instructions = () => {
                 className="w-4 h-4 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-xs text-slate-700 font-semibold">
-                I have read and agree to all rules, proctoring policies, and system guidelines for IDP Assess 360.
+                I have read and agree to all rules, proctoring policies, and system guidelines for Hire360.
               </span>
             </label>
           </div>

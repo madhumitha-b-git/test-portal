@@ -4,7 +4,7 @@ import { fetchQuestions, startProctoringSession, incrementWarning, submitAnswers
 import { runPythonCode } from "../../services/codeExecution";
 import IdpLogo from "../../components/IdpLogo";
 import PythonEditor from "../../components/PythonEditor";
-import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, FileCheck2, User, Play, Terminal, Loader2 } from "lucide-react";
+import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, AlertCircle, FileCheck2, User, Play, Terminal, Loader2, Trash2, Edit3, FileText } from "lucide-react";
 
 const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
@@ -29,6 +29,42 @@ const Test = () => {
   const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
   const [executionMap, setExecutionMap] = useState({});
   const [showOutputMap, setShowOutputMap] = useState({});
+
+  // Resizable Split Panel State for Coding Round
+  const [splitWidth, setSplitWidth] = useState(42); // Left panel width % (20% to 75%)
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const codingContainerRef = useRef(null);
+
+  const handleMouseDownSplit = (e) => {
+    e.preventDefault();
+    setIsDraggingSplit(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handleMouseMove = (e) => {
+      if (!codingContainerRef.current) return;
+      const rect = codingContainerRef.current.getBoundingClientRect();
+      const newWidthPx = e.clientX - rect.left;
+      const percentage = (newWidthPx / rect.width) * 100;
+      if (percentage >= 20 && percentage <= 75) {
+        setSplitWidth(percentage);
+        window.dispatchEvent(new Event("resize"));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSplit(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDraggingSplit]);
 
   const handleRunCode = async (questionId) => {
     if (!questionId) return;
@@ -57,13 +93,17 @@ const Test = () => {
 
     try {
       const res = await runPythonCode(code);
+      const outputText = typeof res?.output === "object"
+        ? JSON.stringify(res.output, null, 2)
+        : String(res?.output ?? "");
+
       setExecutionMap((prev) => ({
         ...prev,
         [questionId]: {
           isRunning: false,
-          status: res.status,
-          output: res.output,
-          executionTimeMs: res.executionTimeMs,
+          status: res?.status || "success",
+          output: outputText,
+          executionTimeMs: res?.executionTimeMs || 0,
         },
       }));
     } catch (err) {
@@ -72,7 +112,8 @@ const Test = () => {
         [questionId]: {
           isRunning: false,
           status: "error",
-          output: "Execution service error. Please try again.",
+          output: `Execution error: ${err?.message || "Please try again."}`,
+          executionTimeMs: 0,
         },
       }));
     }
@@ -250,7 +291,7 @@ const Test = () => {
       }
       
       const respObj = { questionId: q.questionId };
-      if (q.questionType === "CODING") {
+      if (q.questionType === "CODING" || q.questionType === "DESCRIPTIVE") {
         respObj.typedAnswer = currentAnswers[q.questionId] || "";
       } else {
         respObj.selectedOption = currentAnswers[q.questionId] || "";
@@ -508,7 +549,7 @@ const Test = () => {
         }
         
         const respObj = { questionId: q.questionId };
-        if (q.questionType === "CODING") {
+        if (q.questionType === "CODING" || q.questionType === "DESCRIPTIVE") {
           respObj.typedAnswer = currentAnswers[q.questionId] || "";
         } else {
           respObj.selectedOption = currentAnswers[q.questionId] || "";
@@ -638,11 +679,24 @@ const Test = () => {
 
   const mcqQuestions = questions.filter(q => q.questionType === "MCQ");
   const codingQuestions = questions.filter(q => q.questionType === "CODING");
+  const descriptiveQuestions = questions.filter(q => q.questionType === "DESCRIPTIVE");
+
+  const mcqCount = mcqQuestions.length;
+  const codingCount = codingQuestions.length;
+  const descriptiveCount = descriptiveQuestions.length;
+
+  const codingStartIndex = mcqCount;
+  const descriptiveStartIndex = mcqCount + codingCount;
 
   const mcqAnsweredCount = mcqQuestions.filter(q => !!answers[q.questionId]).length;
-  const mcqProgressPercent = Math.round((mcqAnsweredCount / (mcqQuestions.length || 1)) * 100);
+  const codingAnsweredCount = codingQuestions.filter(q => !!answers[q.questionId]).length;
+  const descriptiveAnsweredCount = descriptiveQuestions.filter(q => !!answers[q.questionId]).length;
 
+  const mcqProgressPercent = Math.round((mcqAnsweredCount / (mcqCount || 1)) * 100);
+
+  const isMcq = currentQuestion?.questionType === "MCQ";
   const isCoding = currentQuestion?.questionType === "CODING";
+  const isDescriptive = currentQuestion?.questionType === "DESCRIPTIVE";
 
   const renderPalette = () => (
     <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -699,16 +753,18 @@ const Test = () => {
         </div>
       </div>
 
-      {/* Quick Submit */}
+      {/* Quick Section Navigation */}
       <button
         onClick={() => {
-          if (currentIndex < mcqQuestions.length) {
-            setCurrentIndex(mcqQuestions.length);
+          if (currentIndex < codingStartIndex && codingCount > 0) {
+            setCurrentIndex(codingStartIndex);
+          } else if (currentIndex < descriptiveStartIndex && descriptiveCount > 0) {
+            setCurrentIndex(descriptiveStartIndex);
           }
         }}
         className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
       >
-        Go to Coding Section
+        {currentIndex < codingStartIndex && codingCount > 0 ? "Go to Coding Section" : "Go to Descriptive Section"}
       </button>
     </div>
   );
@@ -730,7 +786,7 @@ const Test = () => {
   }
 
   return (
-    <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${isCoding ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${(isCoding || isDescriptive) ? 'min-h-screen overflow-x-hidden' : 'min-h-screen'}`}>
       
       {/* ── Fullscreen Overlay ── */}
       {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && (
@@ -743,7 +799,7 @@ const Test = () => {
               {fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'Security Warning!' : 'Fullscreen Mode Required'}
             </h2>
             <p className="text-slate-600 text-xs mb-4">
-              IDP Assess 360 requires active Fullscreen mode to continue your assessment.
+              Hire360 requires active Fullscreen mode to continue your assessment.
             </p>
 
             {fullscreenCountdown !== null && (
@@ -795,11 +851,11 @@ const Test = () => {
           <IdpLogo showTagline={false} />
 
           {/* Section Tabs */}
-          <div className="hidden md:flex bg-slate-100 p-1 rounded-lg">
+          <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1">
             <button
               onClick={() => setCurrentIndex(0)}
-              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                !isCoding
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                isMcq
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
@@ -808,17 +864,31 @@ const Test = () => {
             </button>
             <button
               onClick={() => {
-                if (mcqQuestions.length > 0) {
-                  setCurrentIndex(mcqQuestions.length);
+                if (codingCount > 0) {
+                  setCurrentIndex(codingStartIndex);
                 }
               }}
-              className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 isCoding
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
               Section B: Coding
+            </button>
+            <button
+              onClick={() => {
+                if (descriptiveCount > 0) {
+                  setCurrentIndex(descriptiveStartIndex);
+                }
+              }}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                isDescriptive
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Section C: Descriptive
             </button>
           </div>
 
@@ -861,18 +931,18 @@ const Test = () => {
       </header>
 
       {/* Main Examination View */}
-      <main className={`max-w-7xl mx-auto w-full p-4 sm:p-6 my-2 ${isCoding ? 'flex-1 flex flex-col min-h-0' : 'flex-1'}`}>
+      <main className={`max-w-7xl mx-auto w-full p-4 sm:p-6 my-2 ${(isCoding || isDescriptive) ? 'flex-1 flex flex-col min-h-0' : 'flex-1'}`}>
         {isCoding ? (
-          <div className="w-full flex flex-col h-full space-y-4">
+          <div className="w-full flex flex-col min-h-[580px] space-y-4">
             
             {/* Section Header Card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
               <div>
                 <span className="px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
                   Section B: Coding Round
                 </span>
                 <h2 className="text-lg font-bold text-slate-900 mt-2">
-                  Coding Question {currentIndex - mcqQuestions.length + 1} of {codingQuestions.length}
+                  Coding Question {currentIndex - codingStartIndex + 1} of {codingCount}
                 </h2>
               </div>
 
@@ -880,7 +950,7 @@ const Test = () => {
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Questions:</span>
                 {codingQuestions.map((q, index) => {
-                  const globalIndex = mcqQuestions.length + index;
+                  const globalIndex = codingStartIndex + index;
                   const isCurrent = currentIndex === globalIndex;
                   const isAnswered = !!answers[q.questionId];
                   return (
@@ -902,39 +972,62 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Side-by-side Layout */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+            {/* Side-by-side Resizable Layout */}
+            <div
+              ref={codingContainerRef}
+              className={`flex-1 flex flex-col lg:flex-row min-h-[480px] ${
+                isDraggingSplit ? "select-none" : ""
+              }`}
+            >
               {/* Left Column: Problem Description Card */}
-              <div className="w-full lg:w-5/12 bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden">
+              <div
+                style={{ width: window.innerWidth >= 1024 ? `${splitWidth}%` : "100%" }}
+                className={`w-full bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[460px] overflow-hidden ${
+                  isDraggingSplit ? "" : "transition-all duration-75"
+                }`}
+              >
                 <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
                   <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Problem Statement</h3>
                   <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
-                    {currentQuestion?.marks || 10} Marks
+                    {currentQuestion?.marks || 15} Marks
                   </span>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pr-1">
                   <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
                     {currentQuestion?.question || currentQuestion?.text}
                   </p>
                 </div>
               </div>
 
+              {/* Draggable Split Divider Bar (Desktop) */}
+              <div
+                onMouseDown={handleMouseDownSplit}
+                className="hidden lg:flex w-4 cursor-col-resize items-center justify-center bg-transparent hover:bg-blue-100/60 group transition-colors duration-150 relative z-10 shrink-0 mx-1 rounded-md"
+                title="Click and drag to adjust width between Problem Statement and Code Editor"
+              >
+                <div className="w-1.5 h-16 bg-slate-300 group-hover:bg-blue-600 rounded-full transition-colors flex flex-col justify-center items-center gap-1 shadow-xs">
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                </div>
+              </div>
+
               {/* Right Column: Python IDE Card */}
-              <div className="w-full lg:w-7/12 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col h-full overflow-hidden">
+              <div
+                style={{ width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%" }}
+                className={`w-full flex-1 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col min-h-[460px] overflow-hidden ${
+                  isDraggingSplit ? "" : "transition-all duration-75"
+                }`}
+              >
                 {/* IDE Header */}
                 <div className="bg-slate-950 px-5 py-3 border-b border-slate-850 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      {/* <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                      <span className="w-3 h-3 rounded-full bg-green-500"></span> */}
-                    </div>
-                    <span className="text-xs font-semibold text-slate-400 font-mono ml-3">Python</span>
+                    <span className="text-xs font-semibold text-slate-400 font-mono">Python 3</span>
                   </div>
                 </div>
                 
                 {/* Python Monaco Editor area */}
-                <div className="flex-1 relative overflow-hidden">
+                <div className="flex-1 relative overflow-hidden min-h-[340px]">
                   <PythonEditor
                     value={answers[currentQuestion.questionId] || ""}
                     onChange={(val) => handleAnswer(currentQuestion.questionId, val)}
@@ -955,30 +1048,44 @@ const Test = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleRunCode(currentQuestion?.questionId)}
-                    disabled={executionMap[currentQuestion?.questionId]?.isRunning}
-                    className={`flex items-center gap-2 px-4 py-1.5 rounded-md font-sans text-xs font-bold transition cursor-pointer ${
-                      executionMap[currentQuestion?.questionId]?.isRunning
-                        ? "bg-slate-800 text-slate-400 cursor-not-allowed"
-                        : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                    }`}
-                  >
-                    {executionMap[currentQuestion?.questionId]?.isRunning ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Running...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Run Code</span>
-                      </>
+                  <div className="flex items-center gap-2">
+                    {executionMap[currentQuestion?.questionId] && (
+                      <button
+                        onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: !prev[currentQuestion?.questionId] }))}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                        title={showOutputMap[currentQuestion?.questionId] ? "Collapse output panel" : "Expand output panel"}
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>{showOutputMap[currentQuestion?.questionId] ? "Hide Output" : "Show Output"}</span>
+                        {showOutputMap[currentQuestion?.questionId] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                      </button>
                     )}
-                  </button>
+
+                    <button
+                      onClick={() => handleRunCode(currentQuestion?.questionId)}
+                      disabled={executionMap[currentQuestion?.questionId]?.isRunning}
+                      className={`flex items-center gap-2 px-4 py-1.5 rounded-md font-sans text-xs font-bold transition cursor-pointer ${
+                        executionMap[currentQuestion?.questionId]?.isRunning
+                          ? "bg-slate-800 text-slate-400 cursor-not-allowed"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                      }`}
+                    >
+                      {executionMap[currentQuestion?.questionId]?.isRunning ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Running...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Run Code</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Output Panel (visible only after Run Code is clicked for the current question) */}
+                {/* Output Panel */}
                 {showOutputMap[currentQuestion?.questionId] && (
                   <div className="bg-slate-950 border-t border-slate-850 p-4 flex flex-col h-[150px] shrink-0 font-mono text-xs">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-2 shrink-0">
@@ -991,16 +1098,26 @@ const Test = () => {
                           </span>
                         )}
                       </div>
-                      {executionMap[currentQuestion?.questionId]?.status === "error" && (
-                        <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded">
-                          Execution Error
-                        </span>
-                      )}
-                      {executionMap[currentQuestion?.questionId]?.status === "success" && (
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">
-                          Success
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {executionMap[currentQuestion?.questionId]?.status === "error" && (
+                          <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded">
+                            Execution Error
+                          </span>
+                        )}
+                        {executionMap[currentQuestion?.questionId]?.status === "success" && (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">
+                            Success
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: false }))}
+                          title="Close / Hide Output Panel"
+                          className="flex items-center gap-1 text-[11px] font-sans font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800 px-2 py-0.5 rounded transition cursor-pointer"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          <span>Close</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Output Content Area */}
@@ -1012,15 +1129,15 @@ const Test = () => {
                         </div>
                       ) : executionMap[currentQuestion?.questionId]?.status === "error" ? (
                         <pre className="text-red-400 whitespace-pre-wrap font-mono text-[11px]">
-                          {executionMap[currentQuestion?.questionId]?.output}
+                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
                         </pre>
                       ) : executionMap[currentQuestion?.questionId]?.status === "empty" ? (
                         <p className="text-amber-400 text-[11px]">
-                          {executionMap[currentQuestion?.questionId]?.output}
+                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
                         </p>
                       ) : executionMap[currentQuestion?.questionId]?.output ? (
                         <pre className="text-slate-200 whitespace-pre-wrap font-mono text-[11px]">
-                          {executionMap[currentQuestion?.questionId]?.output}
+                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
                         </pre>
                       ) : (
                         <p className="text-slate-500 italic text-[11px]">
@@ -1034,11 +1151,170 @@ const Test = () => {
             </div>
 
             {/* Navigation Controls at the Bottom */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
               <button
                 onClick={() => {
-                  if (currentIndex === mcqQuestions.length) {
-                    setCurrentIndex(mcqQuestions.length - 1);
+                  if (currentIndex === codingStartIndex) {
+                    setCurrentIndex(codingStartIndex - 1);
+                  } else {
+                    handlePrevious();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous Question</span>
+              </button>
+
+              <div className="flex items-center gap-3">
+                {currentIndex === descriptiveStartIndex - 1 && descriptiveCount > 0 ? (
+                  <button
+                    onClick={() => setCurrentIndex(descriptiveStartIndex)}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition cursor-pointer"
+                  >
+                    <span>Proceed to Descriptive Section</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : currentIndex === questions.length - 1 ? (
+                  <button
+                    onClick={handleSubmit}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                  >
+                    <FileCheck2 className="w-4 h-4" />
+                    <span>Review & Submit</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNext}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                  >
+                    <span>Next Question</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        ) : isDescriptive ? (
+          <div className="w-full flex flex-col min-h-[580px] space-y-4">
+            
+            {/* Section Header Card */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
+              <div>
+                <span className="px-2.5 py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">
+                  Section C: Descriptive Round
+                </span>
+                <h2 className="text-lg font-bold text-slate-900 mt-2">
+                  Descriptive Task {currentIndex - descriptiveStartIndex + 1} of {descriptiveCount}
+                </h2>
+              </div>
+
+              {/* Task Navigation Tabs */}
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
+                <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Tasks:</span>
+                {descriptiveQuestions.map((q, index) => {
+                  const globalIndex = descriptiveStartIndex + index;
+                  const isCurrent = currentIndex === globalIndex;
+                  const isAnswered = !!answers[q.questionId];
+                  return (
+                    <button
+                      key={q.questionId}
+                      onClick={() => setCurrentIndex(globalIndex)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
+                        isCurrent
+                          ? "bg-purple-600 text-white shadow-xs"
+                          : isAnswered
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      Task {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Side-by-side Layout */}
+            <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[480px]">
+              {/* Left Column: Problem Prompt Card */}
+              <div className="w-full lg:w-5/12 bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[460px] justify-between overflow-hidden">
+                <div>
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
+                    <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Task Prompt & Scenario</h3>
+                    <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded">
+                      {currentQuestion?.marks || 15} Marks
+                    </span>
+                  </div>
+                  <div className="overflow-y-auto max-h-[320px] pr-2">
+                    <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
+                      {currentQuestion?.question || currentQuestion?.text}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <h4 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                    <Edit3 className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Notepad Guidelines</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-600 leading-normal">
+                    Type your email or written content in the notepad area. Your text is auto-saved in real-time as you write. Use the Clear button to start fresh.
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: White Screen Notepad Card */}
+              <div className="w-full lg:w-7/12 bg-white rounded-xl border border-slate-300 shadow-md flex flex-col min-h-[460px] overflow-hidden">
+                {/* Notepad Header Bar */}
+                <div className="bg-slate-100 px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs font-bold text-slate-800 font-sans uppercase tracking-wider">Notepad Editor</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-semibold text-slate-500 font-mono">
+                      {(answers[currentQuestion?.questionId] || "").trim().split(/\s+/).filter(Boolean).length} Words | {(answers[currentQuestion?.questionId] || "").length} Chars
+                    </span>
+
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${
+                      answers[currentQuestion?.questionId] ? "text-emerald-700 bg-emerald-50 border-emerald-200" : "text-amber-700 bg-amber-50 border-amber-200"
+                    }`}>
+                      {answers[currentQuestion?.questionId] ? "Saved (Draft)" : "Unsaved"}
+                    </span>
+
+                    {/* Clear Button */}
+                    <button
+                      onClick={() => handleAnswer(currentQuestion?.questionId, "")}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
+                      title="Clear Notepad Text"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* White Screen Textarea Area */}
+                <div className="p-4 sm:p-6 bg-white flex-1 flex flex-col">
+                  <textarea
+                    value={answers[currentQuestion?.questionId] || ""}
+                    onChange={(e) => handleAnswer(currentQuestion?.questionId, e.target.value)}
+                    placeholder="Type your response here... (Auto-saved)"
+                    className="w-full flex-1 min-h-[380px] p-4 bg-white text-slate-900 font-sans text-sm leading-relaxed border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-none shadow-inner"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Controls at the Bottom */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  if (currentIndex === descriptiveStartIndex && codingCount > 0) {
+                    setCurrentIndex(descriptiveStartIndex - 1);
                   } else {
                     handlePrevious();
                   }
@@ -1144,10 +1420,16 @@ const Test = () => {
                   <div className="flex items-center gap-3">
                     {currentIndex === mcqQuestions.length - 1 ? (
                       <button
-                        onClick={() => setCurrentIndex(mcqQuestions.length)}
+                        onClick={() => {
+                          if (codingCount > 0) {
+                            setCurrentIndex(codingStartIndex);
+                          } else if (descriptiveCount > 0) {
+                            setCurrentIndex(descriptiveStartIndex);
+                          }
+                        }}
                         className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                       >
-                        <span>Proceed to Coding Section</span>
+                        <span>{codingCount > 0 ? "Proceed to Coding Section" : "Proceed to Descriptive Section"}</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     ) : (

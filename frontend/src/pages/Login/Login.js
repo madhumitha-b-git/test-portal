@@ -19,7 +19,9 @@ import {
   Clock, 
   AlertOctagon, 
   RefreshCw, 
-  Sparkles 
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 const Login = () => {
@@ -57,6 +59,11 @@ const Login = () => {
     mailId: "",
     password: "",
   });
+
+  // Password visibility states
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Form error state
   const [errors, setErrors] = useState({});
@@ -554,7 +561,7 @@ const Login = () => {
               </div>
 
               <p className="text-slate-600 text-sm leading-relaxed">
-                Welcome to <strong>IDP Assess 360</strong>. Please complete candidate registration or log in to resume your active test session.
+                Welcome to <strong>Hire360</strong>. Please complete candidate registration or log in to resume your active test session.
               </p>
 
               <div className="space-y-3 pt-2">
@@ -723,7 +730,7 @@ const Login = () => {
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                           <input
-                            type="text"
+                            type={showRegPassword ? "text" : "password"}
                             name="password"
                             value={regData.password}
                             onChange={handleRegChange}
@@ -731,13 +738,20 @@ const Login = () => {
                             inputMode="numeric"
                             maxLength={4}
                             pattern="[0-9]*"
-                            autoComplete="off"
-                            className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                            autoComplete="new-password"
+                            className={`w-full bg-white text-slate-900 text-sm pl-10 pr-10 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                               errors.password
                                 ? "border-red-400 focus:ring-red-100"
                                 : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
                             }`}
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegPassword(!showRegPassword)}
+                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                         {errors.password && <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.password}</p>}
                       </div>
@@ -749,7 +763,7 @@ const Login = () => {
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                           <input
-                            type="text"
+                            type={showConfirmPassword ? "text" : "password"}
                             name="confirmPassword"
                             value={regData.confirmPassword}
                             onChange={handleRegChange}
@@ -757,13 +771,20 @@ const Login = () => {
                             inputMode="numeric"
                             maxLength={4}
                             pattern="[0-9]*"
-                            autoComplete="off"
-                            className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                            autoComplete="new-password"
+                            className={`w-full bg-white text-slate-900 text-sm pl-10 pr-10 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                               errors.confirmPassword
                                 ? "border-red-400 focus:ring-red-100"
                                 : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
                             }`}
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                         {errors.confirmPassword && <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.confirmPassword}</p>}
                       </div>
@@ -841,7 +862,7 @@ const Login = () => {
                       <div className="relative">
                         <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                         <input
-                          type="text"
+                          type={showLoginPassword ? "text" : "password"}
                           name="password"
                           value={loginData.password}
                           onChange={handleLoginChange}
@@ -849,13 +870,20 @@ const Login = () => {
                           inputMode="numeric"
                           maxLength={4}
                           pattern="[0-9]*"
-                          autoComplete="off"
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          autoComplete="current-password"
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-10 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition ${
                             errors.password
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
                           }`}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword(!showLoginPassword)}
+                          className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
                       {errors.password && <p className="text-red-600 text-xs mt-1 font-medium">{errors.password}</p>}
                     </div>

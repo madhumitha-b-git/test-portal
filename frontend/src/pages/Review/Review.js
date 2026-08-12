@@ -33,12 +33,16 @@ const Review = () => {
 
   const mcqQuestions = questions.filter(q => q.questionType === "MCQ");
   const codingQuestions = questions.filter(q => q.questionType === "CODING");
+  const descriptiveQuestions = questions.filter(q => q.questionType === "DESCRIPTIVE");
   
   const mcqAnsweredCount = mcqQuestions.filter(q => !!answers[q.questionId]).length;
   const mcqUnansweredCount = mcqQuestions.length - mcqAnsweredCount;
   
   const codingAnsweredCount = codingQuestions.filter(q => !!answers[q.questionId]).length;
   const codingUnansweredCount = codingQuestions.length - codingAnsweredCount;
+
+  const descriptiveAnsweredCount = descriptiveQuestions.filter(q => !!answers[q.questionId]).length;
+  const descriptiveUnansweredCount = descriptiveQuestions.length - descriptiveAnsweredCount;
 
   // Handle final submit
   const handleFinalSubmit = async () => {
@@ -56,7 +60,7 @@ const Review = () => {
         }
         
         const respObj = { questionId: q.questionId };
-        if (q.questionType === "CODING") {
+        if (q.questionType === "CODING" || q.questionType === "DESCRIPTIVE") {
           respObj.typedAnswer = answers[q.questionId] || "";
         } else {
           respObj.selectedOption = answers[q.questionId] || "";
@@ -94,12 +98,14 @@ const Review = () => {
       // Mark as submitted
       localStorage.setItem("testSubmitted", "true");
 
-      // Clear localStorage
+      // Clear all cached test session data from localStorage
       localStorage.removeItem("answers");
       localStorage.removeItem("questions");
+      localStorage.removeItem("currentIndex");
       localStorage.removeItem("proctoringStartedTime");
       localStorage.removeItem("proctoringWarningCount");
       localStorage.removeItem("proctoringStatus");
+      localStorage.removeItem("totalDurationMinutes");
 
       // Redirect to Thank You page
       navigate("/thankyou", { replace: true });
@@ -138,7 +144,7 @@ const Review = () => {
           </div>
 
           {/* Unified Metric Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
             
             {/* Section A Card */}
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -195,6 +201,35 @@ const Review = () => {
                 </div>
               </div>
             )}
+
+            {/* Section C Card */}
+            {descriptiveQuestions.length > 0 && (
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                    Section C: Descriptive
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                    {descriptiveAnsweredCount}/{descriptiveQuestions.length} Done
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
+                    <p className="text-xl font-extrabold text-purple-700">{descriptiveQuestions.length}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Total</p>
+                  </div>
+                  <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200 text-center">
+                    <p className="text-xl font-extrabold text-emerald-700">{descriptiveAnsweredCount}</p>
+                    <p className="text-[10px] text-emerald-800 font-bold uppercase mt-1">Answered</p>
+                  </div>
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-center">
+                    <p className="text-xl font-extrabold text-amber-700">{descriptiveUnansweredCount}</p>
+                    <p className="text-[10px] text-amber-800 font-bold uppercase mt-1">Unanswered</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Warning Banner */}
@@ -216,7 +251,7 @@ const Review = () => {
           )}
 
           {/* Responses Breakdown List */}
-          <div className="space-y-6 mb-8 max-h-[350px] overflow-y-auto pr-2">
+          <div className="space-y-6 mb-8 max-h-[380px] overflow-y-auto pr-2">
             
             {/* Section A: Aptitude */}
             <div>
@@ -256,41 +291,83 @@ const Review = () => {
             </div>
 
             {/* Section B: Coding */}
-            <div>
-              <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">Section B: Coding Round</h3>
-              <div className="space-y-2">
-                {questions.filter(q => q.questionType === "CODING").map((q, idx) => {
-                  const isAnswered = !!answers[q.questionId];
-                  return (
-                    <div
-                      key={q.questionId}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px]">
-                          {idx + 1}
-                        </span>
-                        <span className="text-slate-800 font-medium truncate max-w-[280px] sm:max-w-md">
-                          {q.question || q.text}
-                        </span>
-                      </div>
+            {codingQuestions.length > 0 && (
+              <div>
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">Section B: Coding Round</h3>
+                <div className="space-y-2">
+                  {codingQuestions.map((q, idx) => {
+                    const isAnswered = !!answers[q.questionId];
+                    return (
+                      <div
+                        key={q.questionId}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px]">
+                            {idx + 1}
+                          </span>
+                          <span className="text-slate-800 font-medium truncate max-w-[280px] sm:max-w-md">
+                            {q.question || q.text}
+                          </span>
+                        </div>
 
-                      {isAnswered ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[11px] border border-blue-200">
-                          <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                          Code Submitted
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200">
-                          <HelpCircle className="w-3 h-3 text-amber-600" />
-                          Unanswered
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                        {isAnswered ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[11px] border border-blue-200">
+                            <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                            Code Submitted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200">
+                            <HelpCircle className="w-3 h-3 text-amber-600" />
+                            Unanswered
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Section C: Descriptive */}
+            {descriptiveQuestions.length > 0 && (
+              <div>
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">Section C: Descriptive Round</h3>
+                <div className="space-y-2">
+                  {descriptiveQuestions.map((q, idx) => {
+                    const isAnswered = !!answers[q.questionId];
+                    const charLen = (answers[q.questionId] || "").length;
+                    return (
+                      <div
+                        key={q.questionId}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded bg-purple-100 text-purple-800 flex items-center justify-center font-bold text-[11px]">
+                            {idx + 1}
+                          </span>
+                          <span className="text-slate-800 font-medium truncate max-w-[280px] sm:max-w-md">
+                            {q.question || q.text}
+                          </span>
+                        </div>
+
+                        {isAnswered ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[11px] border border-purple-200">
+                            <CheckCircle2 className="w-3 h-3 text-purple-600" />
+                            Text Saved ({charLen} Chars)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200">
+                            <HelpCircle className="w-3 h-3 text-amber-600" />
+                            Unanswered
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Buttons */}
