@@ -9,6 +9,7 @@ app = FastAPI(title="Online Assessment Portal", version="1.0.0")
 # CORS - allows React frontend to talk to this backend
 allowed_origins = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://127.0.0.1:3000",
     "https://drwywdzm7fvk7.cloudfront.net",
     "https://d1t6qh90xvpukg.cloudfront.net",

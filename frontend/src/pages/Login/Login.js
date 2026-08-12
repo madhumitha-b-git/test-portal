@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { registerCandidate, loginCandidate, fetchTestByLinkId } from "../../services/api";
+import { registerCandidate, loginCandidate, fetchTestByLinkId, fetchProctoringSessions } from "../../services/api";
 import IdpLogo from "../../components/IdpLogo";
 import Footer from "../../components/Footer";
 import { 
@@ -113,16 +113,23 @@ const Login = () => {
     validateLink();
   }, [linkId]);
 
-  // Handle register inputs
+  // Handle register inputs (password/confirmPassword are 4-digit PINs)
   const handleRegChange = (e) => {
-    setRegData({ ...regData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "", api: "" });
+    const { name, value } = e.target;
+    const sanitized =
+      name === "password" || name === "confirmPassword"
+        ? value.replace(/\D/g, "").slice(0, 4)
+        : value;
+    setRegData({ ...regData, [name]: sanitized });
+    setErrors({ ...errors, [name]: "", api: "" });
   };
 
-  // Handle login inputs
+  // Handle login inputs (password is a 4-digit PIN)
   const handleLoginChange = (e) => {
-    setLoginData({ ...loginData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "", api: "" });
+    const { name, value } = e.target;
+    const sanitized = name === "password" ? value.replace(/\D/g, "").slice(0, 4) : value;
+    setLoginData({ ...loginData, [name]: sanitized });
+    setErrors({ ...errors, [name]: "", api: "" });
   };
 
   // Strict list of allowed email domains for candidate registration & login
@@ -152,15 +159,8 @@ const Login = () => {
     return ALLOWED_EMAIL_DOMAINS.has(domain);
   };
 
-  // Password complexity validator for Signup (8+ chars, uppercase, lowercase, number, special char)
-  const isValidPasswordComplexity = (password) => {
-    if (!password || password.length < 8) return false;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
-    return hasUpper && hasLower && hasNumber && hasSpecial;
-  };
+  // 4-digit PIN validator for Signup & Login
+  const isValidPin = (pin) => /^\d{4}$/.test(pin || "");
 
   // Switch tab helper
   const handleTabSwitch = (tab) => {
@@ -194,15 +194,15 @@ const Login = () => {
     }
 
     if (!regData.password) {
-      newErrors.password = "Password is required";
-    } else if (!isValidPasswordComplexity(regData.password)) {
-      newErrors.password = "Password must contain at least 8 characters, including uppercase, lowercase, number and special character.";
+      newErrors.password = "PIN is required";
+    } else if (!isValidPin(regData.password)) {
+      newErrors.password = "PIN must be exactly 4 digits.";
     }
 
     if (!regData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
+      newErrors.confirmPassword = "Please confirm your PIN";
     } else if (regData.password !== regData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      newErrors.confirmPassword = "PINs do not match";
     }
 
     return newErrors;
@@ -220,7 +220,9 @@ const Login = () => {
     }
 
     if (!loginData.password) {
-      newErrors.password = "Password is required";
+      newErrors.password = "PIN is required";
+    } else if (!isValidPin(loginData.password)) {
+      newErrors.password = "PIN must be exactly 4 digits.";
     }
 
     return newErrors;
@@ -310,6 +312,54 @@ const Login = () => {
           mobile: userProfile.mobile || "",
         })
       );
+
+      // Check proctoring session status BEFORE allowing the user to continue/resume
+      let sessionStatus = null;
+      try {
+        const sessionsRes = await fetchProctoringSessions();
+        const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
+        const mySessions = sessions.filter(
+          (s) =>
+            (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail
+        );
+        if (mySessions.length > 0) {
+          mySessions.sort((a, b) =>
+            String(b.startedTime).localeCompare(String(a.startedTime))
+          );
+          sessionStatus = (mySessions[0].status || "").toUpperCase().trim();
+        }
+      } catch (error) {
+        console.error("Error fetching proctoring session status:", error);
+      }
+
+      // Terminated candidate -> show terminated window, block re-entry
+      if (sessionStatus === "TERMINATED") {
+        localStorage.setItem("testSubmitted", "true");
+        localStorage.setItem("testTerminated", "true");
+        localStorage.setItem(
+          "terminationReason",
+          "Your assessment session was terminated due to a proctoring violation. You are not allowed to retake this assessment."
+        );
+        localStorage.removeItem("questions");
+        localStorage.removeItem("answers");
+        localStorage.removeItem("currentIndex");
+        localStorage.removeItem("proctoringStartedTime");
+        navigate("/thankyou", { replace: true });
+        return;
+      }
+
+      // Completed candidate -> show completed window, block re-entry
+      if (sessionStatus === "SUCCESS") {
+        localStorage.setItem("testSubmitted", "true");
+        localStorage.removeItem("testTerminated");
+        localStorage.removeItem("terminationReason");
+        localStorage.removeItem("questions");
+        localStorage.removeItem("answers");
+        localStorage.removeItem("currentIndex");
+        localStorage.removeItem("proctoringStartedTime");
+        navigate("/thankyou", { replace: true });
+        return;
+      }
 
       // Check if test was already submitted
       if (res.data?.isSubmitted) {
@@ -664,20 +714,24 @@ const Login = () => {
                       </div>
                     </div>
 
-                    {/* Password & Confirm Password row */}
+                    {/* PIN & Confirm PIN row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Create Password <span className="text-red-500">*</span>
+                          Create 4-Digit PIN <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                           <input
-                            type="password"
+                            type="text"
                             name="password"
                             value={regData.password}
                             onChange={handleRegChange}
-                            placeholder="Min 6 chars"
+                            placeholder="4-digit PIN"
+                            inputMode="numeric"
+                            maxLength={4}
+                            pattern="[0-9]*"
+                            autoComplete="off"
                             className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                               errors.password
                                 ? "border-red-400 focus:ring-red-100"
@@ -690,16 +744,20 @@ const Login = () => {
 
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Confirm Password <span className="text-red-500">*</span>
+                          Confirm PIN <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                           <input
-                            type="password"
+                            type="text"
                             name="confirmPassword"
                             value={regData.confirmPassword}
                             onChange={handleRegChange}
-                            placeholder="Re-enter password"
+                            placeholder="Re-enter PIN"
+                            inputMode="numeric"
+                            maxLength={4}
+                            pattern="[0-9]*"
+                            autoComplete="off"
                             className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
                               errors.confirmPassword
                                 ? "border-red-400 focus:ring-red-100"
@@ -749,7 +807,7 @@ const Login = () => {
                   <form onSubmit={handleLoginSubmit} className="space-y-4">
                     
                     <div className="bg-blue-50/60 border border-blue-200 text-blue-800 p-3 rounded-lg text-xs leading-relaxed">
-                      <strong>Resuming your assessment?</strong> Enter your registered email and password to pick up where you left off.
+                      <strong>Resuming your assessment?</strong> Enter your registered email and 4-digit PIN to pick up where you left off.
                     </div>
 
                     {/* Mail ID */}
@@ -775,19 +833,23 @@ const Login = () => {
                       {errors.mailId && <p className="text-red-600 text-xs mt-1 font-medium">{errors.mailId}</p>}
                     </div>
 
-                    {/* Password */}
+                    {/* PIN */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Password <span className="text-red-500">*</span>
+                        4-Digit PIN <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                         <input
-                          type="password"
+                          type="text"
                           name="password"
                           value={loginData.password}
                           onChange={handleLoginChange}
-                          placeholder="Enter your password"
+                          placeholder="Enter 4-digit PIN"
+                          inputMode="numeric"
+                          maxLength={4}
+                          pattern="[0-9]*"
+                          autoComplete="off"
                           className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition ${
                             errors.password
                               ? "border-red-400 focus:ring-red-100"

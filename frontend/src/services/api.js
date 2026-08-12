@@ -125,3 +125,7 @@ export const incrementWarning = (data) => API.post("/proctoring/warning", data);
 
 // POST /proctoring/report - Submit final report + end session
 export const submitProctoringReport = (data) => API.post("/proctoring/report", data);
+
+// GET /proctoring/sessions - Fetch all proctoring sessions (from Admin/Proctoring API)
+export const fetchProctoringSessions = () =>
+  axios.get("https://dpm58qtugi.execute-api.ap-southeast-1.amazonaws.com/proctoring/sessions");

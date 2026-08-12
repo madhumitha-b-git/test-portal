@@ -57,10 +57,10 @@ class RegisterRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def password_must_not_be_empty(cls, v):
-        if not v.strip() or len(v.strip()) < 4:
-            raise ValueError("Password must be at least 4 characters long")
-        return v.strip()
+    def password_must_be_4_digit_pin(cls, v):
+        if not v.isdigit() or len(v) != 4:
+            raise ValueError("Password must be a 4-digit number")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -77,10 +77,10 @@ class LoginRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def password_must_not_be_empty(cls, v):
-        if not v.strip():
-            raise ValueError("Password cannot be empty")
-        return v.strip()
+    def password_must_be_4_digit_pin(cls, v):
+        if not v.isdigit() or len(v) != 4:
+            raise ValueError("Password must be a 4-digit number")
+        return v
 
 
 class AnswerItem(BaseModel):
