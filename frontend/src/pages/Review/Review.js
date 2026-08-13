@@ -28,6 +28,14 @@ const Review = () => {
     setAnswers(savedAnswers);
   }, [navigate]);
 
+  // ── Ping timer to detect tab closure ──
+  useEffect(() => {
+    const pingInterval = setInterval(() => {
+      localStorage.setItem("lastPing", Date.now().toString());
+    }, 1000);
+    return () => clearInterval(pingInterval);
+  }, []);
+
   const answeredCount = Object.keys(answers).length;
   const unansweredCount = questions.length - answeredCount;
 
@@ -106,6 +114,7 @@ const Review = () => {
       localStorage.removeItem("proctoringWarningCount");
       localStorage.removeItem("proctoringStatus");
       localStorage.removeItem("totalDurationMinutes");
+      localStorage.removeItem("lastPing");
 
       // Redirect to Thank You page
       navigate("/thankyou", { replace: true });

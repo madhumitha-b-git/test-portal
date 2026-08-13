@@ -8,7 +8,7 @@ import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight,
 
 const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
-const FULLSCREEN_TIMEOUT_MS = 15000;
+const FULLSCREEN_TIMEOUT_MS = 10000;
 
 const Test = () => {
   const navigate = useNavigate();
@@ -133,6 +133,7 @@ const Test = () => {
   const [warningCount, setWarningCount] = useState(() => parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10));
   const [showWarningOverlay, setShowWarningOverlay] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
+  const [shouldTerminateOnLoad, setShouldTerminateOnLoad] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [needsFullscreen, setNeedsFullscreen] = useState(false);
   const [fullscreenCountdown, setFullscreenCountdown] = useState(null);
@@ -188,6 +189,13 @@ const Test = () => {
         // Handle Proctoring Session & Timer
         const existingStartedTime = localStorage.getItem("proctoringStartedTime");
         if (existingStartedTime) {
+          const lastPing = localStorage.getItem("lastPing");
+          if (lastPing) {
+            const timeAway = Date.now() - parseInt(lastPing, 10);
+            if (timeAway > 15000) {
+              setShouldTerminateOnLoad(true);
+            }
+          }
           // Resume existing session
           const startedAt = new Date(existingStartedTime).getTime();
           const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
@@ -327,9 +335,27 @@ const Test = () => {
     localStorage.removeItem("proctoringStartedTime");
     localStorage.removeItem("proctoringWarningCount");
     localStorage.removeItem("proctoringStatus");
+    localStorage.removeItem("lastPing");
 
     setTimeout(() => navigate("/thankyou", { replace: true }), 2000);
   }, [testId, navigate]);
+
+  // ── Ping timer to detect tab closure ──
+  useEffect(() => {
+    if (isTerminated) return;
+    const pingInterval = setInterval(() => {
+      localStorage.setItem("lastPing", Date.now().toString());
+    }, 1000);
+    return () => clearInterval(pingInterval);
+  }, [isTerminated]);
+
+  // ── Terminate on load if tab was closed too long ──
+  useEffect(() => {
+    if (shouldTerminateOnLoad && !loading) {
+      terminateSession("Left exam window for more than 15 seconds");
+      setShouldTerminateOnLoad(false);
+    }
+  }, [shouldTerminateOnLoad, loading, terminateSession]);
 
   // ── Handle tab / window returning within 15s ──
   const handleReturnFromAway = useCallback(() => {
@@ -421,7 +447,7 @@ const Test = () => {
 
   // ── Fullscreen countdown ──
   useEffect(() => {
-    const showCountdown = needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated;
+    const showCountdown = needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && !showWarningOverlay;
 
     if (!showCountdown) {
       clearTimeout(fullscreenTimerRef.current);
@@ -450,7 +476,7 @@ const Test = () => {
       clearInterval(fullscreenIntervalRef.current);
       setFullscreenCountdown(null);
     };
-  }, [needsFullscreen, isTerminated, terminateSession, isDocumentFullscreen]);
+  }, [needsFullscreen, isTerminated, terminateSession, isDocumentFullscreen, showWarningOverlay]);
 
   // ── Restriction handlers ──
   useEffect(() => {
@@ -587,6 +613,7 @@ const Test = () => {
       localStorage.removeItem("proctoringStartedTime");
       localStorage.removeItem("proctoringWarningCount");
       localStorage.removeItem("proctoringStatus");
+      localStorage.removeItem("lastPing");
 
       navigate("/thankyou", { replace: true });
     } catch (err) {
@@ -789,7 +816,7 @@ const Test = () => {
     <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${(isCoding || isDescriptive) ? 'min-h-screen overflow-x-hidden' : 'min-h-screen'}`}>
       
       {/* ── Fullscreen Overlay ── */}
-      {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && (
+      {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && !showWarningOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-slate-200">
             <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
