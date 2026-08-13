@@ -26,6 +26,7 @@ class RegisterRequest(BaseModel):
     mobile: str
     college: str
     password: str
+    testId: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -67,6 +68,8 @@ class LoginRequest(BaseModel):
     """Model for POST /login request body"""
     mailId: str
     password: str
+    testId: Optional[str] = None
+
 
     @field_validator("mailId")
     @classmethod

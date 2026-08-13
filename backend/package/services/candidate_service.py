@@ -1,37 +1,114 @@
-import bcrypt
+import hashlib
+import os
+from datetime import datetime, timezone
 import requests
 from database.dynamodb import get_users_table, get_answers_table, get_questions_table, get_test_config_table, get_proctoring_sessions_table
 
 def hash_password(password: str) -> str:
-    """Hashes plain text password using bcrypt"""
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-    return hashed.decode("utf-8")
+    salt = os.urandom(16).hex()
+    hashed = hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+    return f"{salt}${hashed}"
 
-def register_candidate(name: str, email: str, mobile: str, password: str):
-    """
-    Stores candidate details in Users table.
-    Checks if email already exists before inserting.
-    """
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        if not stored_hash:
+            return True
+        if "$" in stored_hash:
+            salt, calc_hash = stored_hash.split("$", 1)
+            return hashlib.sha256((salt + password).encode("utf-8")).hexdigest() == calc_hash
+        try:
+            import bcrypt
+            return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
+        except Exception:
+            pass
+        return password == stored_hash
+    except Exception:
+        return False
+
+def register_candidate(name: str, mailId: str, mobile: str, college: str = "", password: str = "", testId: str = None, email: str = None):
+    mail_addr = (mailId or email or "").strip().lower()
     table = get_users_table()
 
-    # Check if user already exists
-    response = table.get_item(Key={"mailId": email})
-    if "Item" in response:
-        return {"success": False, "message": "Email already registered"}
+    existing_user = table.get_item(Key={"mailId": mail_addr})
+    if "Item" in existing_user:
+        user = existing_user["Item"]
+        stored_hash = user.get("password")
+        if stored_hash and not verify_password(password, stored_hash):
+            return {
+                "success": False,
+                "message": "Email already registered. Incorrect 4-digit PIN entered."
+            }
 
-    # Hash password before storing
-    hashed_password = hash_password(password)
+        # Check if candidate has already submitted this testId
+        answers_table = get_answers_table()
+        is_submitted = False
+        ans_rec = answers_table.get_item(Key={"mailId": mail_addr}).get("Item", {})
+        if ans_rec:
+            submissions = ans_rec.get("submissions", {})
+            if testId and testId in submissions:
+                sub = submissions[testId]
+                if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
+                    is_submitted = True
+            elif testId and ans_rec.get("testId") == testId:
+                if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                    is_submitted = True
 
-    # Store in DynamoDB
-    table.put_item(Item={
-        "mailId": email,
-        "name": name,
-        "mobile": mobile,
-        "password": hashed_password
-    })
+        # Update candidate record with latest details and testId registration map
+        registrations = user.get("registrations", {})
+        if testId:
+            registrations[testId] = reg_entry
 
-    return {"success": True, "message": "Registered successfully"}
+        table.update_item(
+            Key={"mailId": mail_addr},
+            UpdateExpression="SET #n = :n, mobile = :m, college = :c, registrations = :regs",
+            ExpressionAttributeNames={"#n": "name"},
+            ExpressionAttributeValues={
+                ":n": name or user.get("name", ""),
+                ":m": mobile or user.get("mobile", ""),
+                ":c": college or user.get("college", ""),
+                ":regs": registrations,
+            }
+        )
+
+        return {
+            "success": True,
+            "message": "Account verified successfully",
+            "user": {
+                "name": name or user.get("name", ""),
+                "mailId": mail_addr,
+                "mobile": mobile or user.get("mobile", ""),
+                "college": college or user.get("college", ""),
+            },
+            "isSubmitted": is_submitted
+        }
+
+    hashed_pw = hash_password(password) if password else ""
+    registrations = {testId: reg_entry} if testId else {}
+
+    table.put_item(
+        Item={
+            "mailId": mail_addr,
+            "name": name,
+            "mobile": mobile,
+            "college": college,
+            "password": hashed_pw,
+            "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "registrations": registrations,
+        }
+    )
+
+    return {
+        "success": True,
+        "message": "Registered successfully",
+        "user": {
+            "name": name,
+            "mailId": mail_addr,
+            "mobile": mobile,
+            "college": college,
+        },
+        "isSubmitted": False
+    }
+
 
 def get_questions():
     """
@@ -63,14 +140,27 @@ def get_test_duration():
         print("Error fetching test duration:", e)
     return 60
 
-def submit_answers(mailId: str, testId: str, durationMinutes: int, submitTime: str, answers: list):
+def submit_answers(mailId: str, testId: str, durationMinutes: int = 60, submitTime: str = "", answers: list = []):
     """
-    Stores candidate answers in Answers table.
+    Stores candidate answers in Answers table scoped per testId in submissions dictionary.
     """
     table = get_answers_table()
+    mailId = mailId.strip().lower()
 
-    # Convert pydantic models to plain dicts
-    answers_data = [a.model_dump() for a in answers]
+    answers_data = [a.model_dump() if hasattr(a, "model_dump") else a for a in answers]
+
+    existing_rec = table.get_item(Key={"mailId": mailId}).get("Item", {})
+    submissions = existing_rec.get("submissions", {})
+
+    sub_entry = {
+        "testId": testId,
+        "durationMinutes": durationMinutes,
+        "submitTime": submitTime,
+        "answers": answers_data,
+        "isSubmitted": True,
+        "status": "SUBMITTED"
+    }
+    submissions[testId] = sub_entry
 
     table.put_item(Item={
         "mailId": mailId,
@@ -78,10 +168,13 @@ def submit_answers(mailId: str, testId: str, durationMinutes: int, submitTime: s
         "durationMinutes": durationMinutes,
         "submitTime": submitTime,
         "answers": answers_data,
-        "status": "submitted"
+        "isSubmitted": True,
+        "status": "SUBMITTED",
+        "submissions": submissions
     })
 
     return {"success": True, "message": "Answers submitted successfully"}
+
 
 def sync_answers_from_external(test_id: str):
     """

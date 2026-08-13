@@ -16,33 +16,34 @@ def get_all_sessions():
     table = get_proctoring_sessions_table()
     response = table.scan()
     items = response.get("Items", [])
-    items.sort(key=lambda x: x.get("starttime", ""), reverse=True)
+    items.sort(key=lambda x: x.get("startedTime", ""), reverse=True)
     return [{
-        "mailId": item["mailId"],
-        "testId": item.get("testId", ""),
-        "durationMinutes": int(item.get("durationMinutes", 0)),
-        "starttime": item.get("starttime", ""),
-        "endtime": item.get("endtime", ""),
+        "email": item.get("mailId", ""),
+        "mailId": item.get("mailId", ""),
+        "startedTime": item.get("startedTime", ""),
+        "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
+        "testId": item.get("testId", ""),
     } for item in items]
 
 
-def start_session(mailId: str, testId: str, durationMinutes: int):
+def start_session(mailId: str, testId: str):
     table = get_proctoring_sessions_table()
     started = _now_iso()
 
-    table.put_item(Item={
-        "mailId": mailId,
-        "testId": testId,
-        "durationMinutes": durationMinutes,
-        "starttime": started,
-        "endtime": "",
-        "warningCount": 0,
-        "status": "IN_PROGRESS",
-    })
-
-    return {"mailId": mailId, "testId": testId, "durationMinutes": durationMinutes, "starttime": started, "warningCount": 0, "status": "IN_PROGRESS"}
+    table.put_item(
+        Item={
+            "mailId": mailId,
+            "durationMinutes": 60,
+            "startedTime": started,
+            "endedTime": "",
+            "status": "IN_PROGRESS",
+            "testId": testId,
+            "warningCount": 0,
+        }
+    )
+    return {"mailId": mailId, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS", "testId": testId}
 
 
 def get_session(mailId: str):
@@ -52,13 +53,12 @@ def get_session(mailId: str):
     if not item:
         return None
     return {
-        "mailId": item["mailId"],
-        "testId": item.get("testId", ""),
-        "durationMinutes": int(item.get("durationMinutes", 0)),
-        "starttime": item.get("starttime", ""),
-        "endtime": item.get("endtime", ""),
+        "mailId": item.get("mailId", mailId),
+        "startedTime": item.get("startedTime", ""),
+        "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
+        "testId": item.get("testId", ""),
     }
 
 

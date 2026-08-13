@@ -45,9 +45,11 @@ def register_candidate(
     mobile: str,
     college: str,
     password: str,
+    testId: str = None,
 ):
     """
     Stores candidate details in Users table with hashed password.
+    Scopes registrations per testId so candidate can attend multiple tests with same email.
     """
 
     mailId = mailId.strip().lower()
@@ -60,13 +62,70 @@ def register_candidate(
         if scan_res.get("Items"):
             existing_user = {"Item": scan_res["Items"][0]}
 
+    reg_entry = {
+        "name": name,
+        "mailId": mailId,
+        "mobile": mobile,
+        "college": college,
+        "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if testId:
+        reg_entry["testId"] = testId
+
     if "Item" in existing_user:
+        user = existing_user["Item"]
+        stored_hash = user.get("password")
+        if stored_hash and not verify_password(password, stored_hash):
+            return {
+                "success": False,
+                "message": "Email already registered. Incorrect 4-digit PIN entered."
+            }
+
+        # Check if candidate has already submitted this testId
+        answers_table = get_answers_table()
+        is_submitted = False
+        ans_rec = answers_table.get_item(Key={"mailId": mailId}).get("Item", {})
+        if ans_rec:
+            submissions = ans_rec.get("submissions", {})
+            if testId and testId in submissions:
+                sub = submissions[testId]
+                if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
+                    is_submitted = True
+            elif testId and ans_rec.get("testId") == testId:
+                if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                    is_submitted = True
+
+        # Update candidate record with latest details and testId registration map
+        registrations = user.get("registrations", {})
+        if testId:
+            registrations[testId] = reg_entry
+
+        table.update_item(
+            Key={"mailId": mailId},
+            UpdateExpression="SET #n = :n, mobile = :m, college = :c, registrations = :regs",
+            ExpressionAttributeNames={"#n": "name"},
+            ExpressionAttributeValues={
+                ":n": name,
+                ":m": mobile,
+                ":c": college,
+                ":regs": registrations,
+            }
+        )
+
         return {
-            "success": False,
-            "message": "Email already exists. Please log in with your credentials."
+            "success": True,
+            "message": "Account verified successfully",
+            "user": {
+                "name": name or user.get("name", ""),
+                "mailId": mailId,
+                "mobile": mobile or user.get("mobile", ""),
+                "college": college or user.get("college", ""),
+            },
+            "isSubmitted": is_submitted
         }
 
     hashed_pw = hash_password(password)
+    registrations = {testId: reg_entry} if testId else {}
 
     table.put_item(
         Item={
@@ -76,6 +135,7 @@ def register_candidate(
             "college": college,
             "password": hashed_pw,
             "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "registrations": registrations,
         }
     )
 
@@ -87,16 +147,18 @@ def register_candidate(
             "mailId": mailId,
             "mobile": mobile,
             "college": college,
-        }
+        },
+        "isSubmitted": False
     }
 
 
 def login_candidate(
     mailId: str,
     password: str,
+    testId: str = None,
 ):
     """
-    Validates candidate credentials and retrieves registration details.
+    Validates candidate credentials and checks submission status specifically for target testId.
     """
 
     mailId = mailId.strip().lower()
@@ -104,7 +166,6 @@ def login_candidate(
 
     existing_user = table.get_item(Key={"mailId": mailId})
     if "Item" not in existing_user:
-        # Case-insensitive fallback scan for existing users
         scan_res = table.scan()
         found_item = None
         for item in scan_res.get("Items", []):
@@ -123,25 +184,30 @@ def login_candidate(
     user_mail_id = user.get("mailId", mailId).strip().lower()
     stored_hash = user.get("password")
 
-    # If user has a password stored, verify it
     if stored_hash:
         if not verify_password(password, stored_hash):
             return {
                 "success": False,
-                "message": "Incorrect password. Please try again."
+                "message": "Incorrect password / PIN. Please try again."
             }
 
-    # Check if test has already been submitted in the answers table
+    # Check if THIS specific testId has already been submitted in the answers table
     answers_table = get_answers_table()
-    answer_record = answers_table.get_item(Key={"mailId": user_mail_id})
-    is_submitted = "Item" in answer_record
-    if not is_submitted:
-        # Fallback check in case stored mailId had different casing
-        ans_scan = answers_table.scan()
-        for ans_item in ans_scan.get("Items", []):
-            if ans_item.get("mailId", "").strip().lower() == mailId:
+    is_submitted = False
+
+    ans_rec = answers_table.get_item(Key={"mailId": user_mail_id}).get("Item", {})
+    if ans_rec:
+        submissions = ans_rec.get("submissions", {})
+        if testId and testId in submissions:
+            sub = submissions[testId]
+            if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
                 is_submitted = True
-                break
+        elif testId and ans_rec.get("testId") == testId:
+            if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                is_submitted = True
+        elif not testId:
+            if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                is_submitted = True
 
     return {
         "success": True,
@@ -163,34 +229,42 @@ def submit_answers(
     sections: list,
 ):
     """
-    Stores candidate answers in DynamoDB
-    and publishes the same response format to SNS.
+    Stores candidate answers per testId in DynamoDB without overwriting previous tests.
     """
 
     mailId = mailId.strip().lower()
     table = get_answers_table()
 
-    # Convert Pydantic models into plain dictionaries
     sections_data = [
         section.model_dump(exclude_none=True)
         for section in sections
     ]
 
-    submit_time = datetime.now(
-        timezone.utc
-    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Fetch existing record to maintain testId submissions dictionary
+    existing_rec = table.get_item(Key={"mailId": mailId}).get("Item", {})
+    submissions = existing_rec.get("submissions", {})
 
-    # Save submission to DynamoDB
+    sub_entry = {
+        "testId": testId,
+        "sections": sections_data,
+        "submittedAt": submittedAt,
+        "isSubmitted": True,
+        "status": "SUBMITTED",
+    }
+    submissions[testId] = sub_entry
+
     table.put_item(
         Item={
             "mailId": mailId,
             "testId": testId,
             "sections": sections_data,
             "submittedAt": submittedAt,
+            "isSubmitted": True,
+            "status": "SUBMITTED",
+            "submissions": submissions,
         }
     )
 
-    # Publish the exact structure to SNS
     sns_result = publish_test_submitted_event(
         test_id=testId,
         mail_id=mailId,
@@ -203,6 +277,7 @@ def submit_answers(
         "message": "Answers submitted successfully",
         "sns_message_id": sns_result["message_id"],
     }
+
 
 
 def get_answers_by_test_id(

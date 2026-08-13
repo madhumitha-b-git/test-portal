@@ -17,6 +17,7 @@ def register(request: RegisterRequest):
             mobile=request.mobile,
             college=request.college,
             password=request.password,
+            testId=request.testId,
         )
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -37,10 +38,12 @@ def login(request: LoginRequest):
         result = candidate_service.login_candidate(
             mailId=request.mailId,
             password=request.password,
+            testId=request.testId,
         )
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
         return result
+
     except HTTPException:
         raise
     except Exception as e:

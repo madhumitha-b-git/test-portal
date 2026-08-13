@@ -7,14 +7,24 @@ import Review from "./pages/Review/Review";
 import ThankYou from "./pages/ThankYou/ThankYou";
 
 function LoginGuard({ children }) {
-  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryLinkId = urlParams.get("linkId");
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  const pathLinkId = pathParts.length > 0 && !["instructions", "test", "review", "thankyou"].includes(pathParts[0]) ? pathParts[0] : null;
+  const currentLinkId = queryLinkId || pathLinkId;
+  const cachedLinkId = localStorage.getItem("linkId");
 
-  if (isSubmitted) {
-    return <Navigate to="/thankyou" replace />;
+  // If candidate is opening a NEW linkId, bypass old test redirect guards
+  if (currentLinkId && cachedLinkId && String(currentLinkId).trim() !== String(cachedLinkId).trim()) {
+    return children;
   }
-  if (hasActiveSession) {
-    return <Navigate to="/test" replace />;
+
+  const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const submittedTestId = localStorage.getItem("submittedTestId");
+  const currentTestId = localStorage.getItem("testId");
+
+  if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
+    return <Navigate to="/thankyou" replace />;
   }
   return children;
 }
@@ -22,16 +32,14 @@ function LoginGuard({ children }) {
 function InstructionsGuard({ children }) {
   const candidate = localStorage.getItem("candidate");
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
+  const submittedTestId = localStorage.getItem("submittedTestId");
+  const currentTestId = localStorage.getItem("testId");
 
   if (!candidate) {
     return <Navigate to="/" replace />;
   }
-  if (isSubmitted) {
+  if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
-  }
-  if (hasActiveSession) {
-    return <Navigate to="/test" replace />;
   }
   return children;
 }
@@ -39,11 +47,13 @@ function InstructionsGuard({ children }) {
 function TestGuard({ children }) {
   const candidate = localStorage.getItem("candidate");
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const submittedTestId = localStorage.getItem("submittedTestId");
+  const currentTestId = localStorage.getItem("testId");
 
   if (!candidate) {
     return <Navigate to="/" replace />;
   }
-  if (isSubmitted) {
+  if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
   }
   return children;
@@ -52,16 +62,13 @@ function TestGuard({ children }) {
 function ThankYouGuard({ children }) {
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
   const isTerminated = localStorage.getItem("testTerminated") === "true";
-  const hasActiveSession = !!localStorage.getItem("proctoringStartedTime");
 
   if (!isSubmitted && !isTerminated) {
-    if (hasActiveSession) {
-      return <Navigate to="/test" replace />;
-    }
     return <Navigate to="/" replace />;
   }
   return children;
 }
+
 
 function App() {
   return (

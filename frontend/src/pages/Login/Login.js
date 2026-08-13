@@ -107,6 +107,22 @@ const Login = () => {
         testId: test.testId,
       });
 
+      // If candidate is switching to a different testId, clear old test session state
+      const currentStoredTestId = localStorage.getItem("testId");
+      if (currentStoredTestId && currentStoredTestId !== test.testId) {
+        localStorage.removeItem("testSubmitted");
+        localStorage.removeItem("submittedTestId");
+        localStorage.removeItem("testTerminated");
+        localStorage.removeItem("terminationReason");
+        localStorage.removeItem("questions");
+        localStorage.removeItem("answers");
+        localStorage.removeItem("currentIndex");
+        localStorage.removeItem("proctoringStartedTime");
+        localStorage.removeItem("proctoringWarningCount");
+        localStorage.removeItem("proctoringStatus");
+        localStorage.removeItem("lastPing");
+      }
+
       // Cache verified test metadata in localStorage
       localStorage.setItem("linkId", linkId);
       localStorage.setItem("testTitle", title);
@@ -116,6 +132,7 @@ const Login = () => {
       setLinkError(null);
       setValidatingLink(false);
     };
+
 
     validateLink();
   }, [linkId]);
@@ -249,6 +266,8 @@ const Login = () => {
     try {
       const normalizedMail = regData.mailId.trim().toLowerCase();
 
+      const currentTestId = testInfo.testId || localStorage.getItem("testId") || "";
+
       // Call POST /register API
       const res = await registerCandidate({
         name: regData.name.trim(),
@@ -256,6 +275,7 @@ const Login = () => {
         mobile: regData.mobile.trim(),
         college: regData.college.trim(),
         password: regData.password,
+        testId: currentTestId,
       });
 
       // Clear previous cached session for fresh registration
@@ -280,14 +300,84 @@ const Login = () => {
         })
       );
 
+      // If candidate already submitted this specific test, notify and navigate to ThankYou
+      if (res.data?.isSubmitted) {
+        setErrors({ api: "You are already registered and have completed this assessment. Redirecting to summary page..." });
+        localStorage.setItem("testSubmitted", "true");
+        localStorage.setItem("submittedTestId", currentTestId);
+        localStorage.setItem("terminationReason", `You have already submitted this assessment (Link ID: ${linkId || ""}).`);
+        setTimeout(() => {
+          navigate("/thankyou", { replace: true });
+        }, 1200);
+        return;
+      }
+
       navigate("/instructions");
     } catch (error) {
       const message = error.response?.data?.detail || "Registration failed. Please check your details and try again.";
+      const normalizedMail = regData.mailId.trim().toLowerCase();
+      const currentTestId = testInfo.testId || localStorage.getItem("testId") || "";
+
+      // Auto-fallback: If email is already registered, verify candidate PIN and log in
+      if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exist")) {
+        try {
+          const loginRes = await loginCandidate({
+            mailId: normalizedMail,
+            password: regData.password,
+            testId: currentTestId,
+          });
+          if (loginRes.data?.success) {
+            const userProfile = loginRes.data.user || {};
+            localStorage.removeItem("questions");
+            localStorage.removeItem("answers");
+            localStorage.removeItem("currentIndex");
+            localStorage.removeItem("proctoringStartedTime");
+            localStorage.removeItem("proctoringWarningCount");
+            localStorage.removeItem("proctoringStatus");
+            localStorage.removeItem("testSubmitted");
+            localStorage.removeItem("testTerminated");
+            localStorage.removeItem("terminationReason");
+
+            localStorage.setItem(
+              "candidate",
+              JSON.stringify({
+                name: userProfile.name || regData.name.trim(),
+                mailId: userProfile.mailId || normalizedMail,
+                college: userProfile.college || regData.college.trim(),
+                mobile: userProfile.mobile || regData.mobile.trim(),
+              })
+            );
+
+            if (loginRes.data?.isSubmitted) {
+              setErrors({ api: "You are already registered and have completed this assessment. Redirecting to summary page..." });
+              localStorage.setItem("testSubmitted", "true");
+              localStorage.setItem("submittedTestId", currentTestId);
+              localStorage.setItem("terminationReason", `You have already submitted this assessment (Link ID: ${linkId || ""}).`);
+              setTimeout(() => {
+                navigate("/thankyou", { replace: true });
+              }, 1200);
+              return;
+            }
+
+            setErrors({ api: "You are already registered! Logging you in now..." });
+            setTimeout(() => {
+              navigate("/instructions");
+            }, 1000);
+            return;
+          }
+        } catch (loginErr) {
+          const pinErrMsg = loginErr.response?.data?.detail || "Email already registered. Incorrect 4-digit PIN entered.";
+          setErrors({ api: pinErrMsg });
+          return;
+        }
+      }
+
       setErrors({ api: message });
     } finally {
       setLoading(false);
     }
   };
+
 
   // Handle login submit (for resume or returning candidate)
   const handleLoginSubmit = async (e) => {
@@ -307,7 +397,9 @@ const Login = () => {
       const res = await loginCandidate({
         mailId: normalizedMail,
         password: loginData.password,
+        testId: testInfo.testId || localStorage.getItem("testId") || "",
       });
+
 
       const userProfile = res.data?.user || { mailId: normalizedMail };
       localStorage.setItem(
@@ -325,19 +417,32 @@ const Login = () => {
       try {
         const sessionsRes = await fetchProctoringSessions();
         const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
-        const mySessions = sessions.filter(
-          (s) =>
-            (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail
-        );
+        const currentTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
+        const currentLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
+        const mySessions = sessions.filter((s) => {
+          const matchEmail = (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail;
+          const sTest = String(s.testId || "").trim();
+          const sLink = String(s.linkId || "").trim();
+          const matchTest = (sTest || sLink) ? (
+            (currentTestId && sTest === currentTestId) ||
+            (currentLinkId && sTest === currentLinkId) ||
+            (currentLinkId && sLink === currentLinkId) ||
+            (currentTestId && sLink === currentTestId)
+          ) : true;
+          return matchEmail && matchTest;
+        });
+
         if (mySessions.length > 0) {
           mySessions.sort((a, b) =>
-            String(b.startedTime).localeCompare(String(a.startedTime))
+            String(b.startedTime || b.starttime || "").localeCompare(String(a.startedTime || a.starttime || ""))
           );
           sessionStatus = (mySessions[0].status || "").toUpperCase().trim();
         }
       } catch (error) {
         console.error("Error fetching proctoring session status:", error);
       }
+
+
 
       // Terminated candidate -> show terminated window, block re-entry
       if (sessionStatus === "TERMINATED") {

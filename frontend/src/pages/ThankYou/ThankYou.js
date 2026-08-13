@@ -10,22 +10,70 @@ const ThankYou = () => {
   const isTerminated = localStorage.getItem("testTerminated") === "true";
   const terminationReason = localStorage.getItem("terminationReason") || "";
   const submissionTime = new Date().toLocaleString();
+  const [redirectCountdown, setRedirectCountdown] = React.useState(5);
 
-  useEffect(() => {
-    // Clear test response & session cache from browser storage upon landing on ThankYou
-    localStorage.removeItem("answers");
-    localStorage.removeItem("questions");
-    localStorage.removeItem("currentIndex");
-    localStorage.removeItem("proctoringStartedTime");
-    localStorage.removeItem("proctoringWarningCount");
-    localStorage.removeItem("proctoringStatus");
-    localStorage.removeItem("totalDurationMinutes");
-  }, []);
+  const exitBrowserFullscreen = () => {
+    try {
+      if (
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      ) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
+    } catch (e) {}
+  };
 
-  const handleExitPortal = () => {
+  const performLogoutAndRedirect = React.useCallback(() => {
+    exitBrowserFullscreen();
     localStorage.clear();
     navigate("/", { replace: true });
+  }, [navigate]);
+
+  useEffect(() => {
+    // Automatically exit full-screen mode on thank you / concluded screen
+    exitBrowserFullscreen();
+
+    // 5-second countdown to clear cache and redirect home
+    const interval = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          performLogoutAndRedirect();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Pressing ESC key triggers immediate cache clear and redirect
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        performLogoutAndRedirect();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [performLogoutAndRedirect]);
+
+  const handleExitPortal = () => {
+    performLogoutAndRedirect();
   };
+
+
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
@@ -109,12 +157,13 @@ const ThankYou = () => {
               className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <LogOut className="w-4 h-4" />
-              <span>Exit Portal</span>
+              <span>Exit Portal Now ({redirectCountdown}s)</span>
             </button>
             <p className="text-[11px] text-slate-500 font-medium">
-              You may also close this browser window.
+              Redirecting home & clearing session cache in <strong className="text-slate-800">{redirectCountdown}s</strong> (or press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px] text-slate-700">Esc</kbd>).
             </p>
           </div>
+
 
         </div>
       </main>

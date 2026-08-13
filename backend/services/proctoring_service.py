@@ -19,12 +19,12 @@ def get_all_sessions():
     items.sort(key=lambda x: x.get("startedTime", ""), reverse=True)
     return [{
         "email": item.get("mailId", ""),
-        "startedTime": item.get("starttime", ""),
         "mailId": item.get("mailId", ""),
         "startedTime": item.get("startedTime", ""),
         "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
+        "testId": item.get("testId", ""),
     } for item in items]
 
 
@@ -43,7 +43,7 @@ def start_session(mailId: str, testId: str):
             "warningCount": 0,
         }
     )
-    return {"mailId": mailId, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS"}
+    return {"mailId": mailId, "startedTime": started, "warningCount": 0, "status": "IN_PROGRESS", "testId": testId}
 
 
 def get_session(mailId: str):
@@ -58,7 +58,9 @@ def get_session(mailId: str):
         "endedTime": item.get("endedTime", ""),
         "warningCount": int(item.get("warningCount", 0)),
         "status": item.get("status", ""),
+        "testId": item.get("testId", ""),
     }
+
 
 
 def increment_warning(mailId: str):

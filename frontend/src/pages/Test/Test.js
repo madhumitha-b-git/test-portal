@@ -152,12 +152,15 @@ const Test = () => {
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
   const email = candidate.mailId || candidate.email || "";
 
-  // ── Redirect if already submitted ──
+  // ── Redirect if already submitted FOR THIS SPECIFIC TEST ──
   useEffect(() => {
-    if (localStorage.getItem("testSubmitted") === "true") {
+    const submittedTestId = localStorage.getItem("submittedTestId");
+    const currentTestId = testId || localStorage.getItem("testId");
+    if (localStorage.getItem("testSubmitted") === "true" && (!submittedTestId || submittedTestId === currentTestId)) {
       navigate("/thankyou", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, testId]);
+
 
   // ── Initialization (Questions & Proctoring Session) ──
   useEffect(() => {
@@ -639,11 +642,14 @@ const Test = () => {
     return () => clearInterval(timer);
   }, [timeLeft, isTerminated, autoSubmit]);
 
-  // ── Option select ──
+  // ── Option select (saves dynamically to local cache) ──
   const handleAnswer = (questionId, optionId) => {
     if (showWarningOverlay || isTerminated) return;
-    setAnswers({ ...answers, [questionId]: optionId });
+    const newAnswers = { ...answers, [questionId]: optionId };
+    setAnswers(newAnswers);
+    localStorage.setItem("answers", JSON.stringify(newAnswers));
   };
+
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) setCurrentIndex(currentIndex + 1);
@@ -726,46 +732,48 @@ const Test = () => {
   const isDescriptive = currentQuestion?.questionType === "DESCRIPTIVE";
 
   const renderPalette = () => (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
-        <span className="text-[11px] font-semibold text-blue-700">{mcqAnsweredCount}/{mcqQuestions.length} Answered</span>
-      </div>
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between overflow-hidden">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
+          <span className="text-xs font-bold text-blue-700">{mcqAnsweredCount}/{mcqQuestions.length} Answered</span>
+        </div>
 
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden border border-slate-200">
-        <div
-          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${mcqProgressPercent}%` }}
-        ></div>
-      </div>
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4 overflow-hidden border border-slate-200">
+          <div
+            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+            style={{ width: `${mcqProgressPercent}%` }}
+          ></div>
+        </div>
 
-      {/* Question Buttons Grid */}
-      <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1">
-        {mcqQuestions.map((q, index) => {
-          const isCurrent = currentIndex === index;
-          const isAnswered = !!answers[q.questionId];
+        {/* Question Buttons Grid - Compact 5-column grid */}
+        <div className="grid grid-cols-5 gap-2.5 my-2 max-w-sm">
+          {mcqQuestions.map((q, index) => {
+            const isCurrent = currentIndex === index;
+            const isAnswered = !!answers[q.questionId];
 
-          return (
-            <button
-              key={q.questionId}
-              onClick={() => handlePaletteClick(index)}
-              className={`h-9 rounded-lg font-bold text-xs transition duration-150 cursor-pointer flex items-center justify-center ${
-                isCurrent
-                  ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs"
-                  : isAnswered
-                  ? "bg-emerald-600 text-white"
-                  : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
-              }`}
-            >
-              {index + 1}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={q.questionId}
+                onClick={() => handlePaletteClick(index)}
+                className={`h-9 sm:h-10 rounded-lg font-bold text-xs sm:text-sm transition duration-150 cursor-pointer flex items-center justify-center ${
+                  isCurrent
+                    ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105"
+                    : isAnswered
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
+                }`}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Status Legend */}
-      <div className="mt-5 pt-4 border-t border-slate-200 grid grid-cols-3 gap-2 text-[10px] text-slate-600 font-semibold font-medium">
+      <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] sm:text-xs text-slate-600 font-semibold shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-emerald-600"></div>
           <span>Answered</span>
@@ -779,22 +787,12 @@ const Test = () => {
           <span>Unanswered</span>
         </div>
       </div>
-
-      {/* Quick Section Navigation */}
-      <button
-        onClick={() => {
-          if (currentIndex < codingStartIndex && codingCount > 0) {
-            setCurrentIndex(codingStartIndex);
-          } else if (currentIndex < descriptiveStartIndex && descriptiveCount > 0) {
-            setCurrentIndex(descriptiveStartIndex);
-          }
-        }}
-        className="w-full mt-5 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
-      >
-        {currentIndex < codingStartIndex && codingCount > 0 ? "Go to Coding Section" : "Go to Descriptive Section"}
-      </button>
     </div>
   );
+
+
+
+
 
   // ── Terminated screen ──
   if (isTerminated) {
@@ -813,7 +811,7 @@ const Test = () => {
   }
 
   return (
-    <div className={`bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative ${(isCoding || isDescriptive) ? 'min-h-screen overflow-x-hidden' : 'min-h-screen'}`}>
+    <div className="bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative h-screen max-h-screen overflow-hidden">
       
       {/* ── Fullscreen Overlay ── */}
       {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && !showWarningOverlay && (
@@ -871,53 +869,58 @@ const Test = () => {
         </div>
       )}
 
-      {/* Top Header Bar */}
-      <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 py-3 sticky top-0 z-40 shadow-xs">
+      {/* Top Header Bar - Section tabs positioned 2 inches down with comfortable spacing */}
+      <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 pt-3.5 pb-3 shrink-0 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           
-          <IdpLogo showTagline={false} />
+          {/* Left: Logo & Section Navigation Tabs (positioned lower down for easy access) */}
+          <div className="flex items-center gap-6">
+            <IdpLogo showTagline={false} />
 
-          {/* Section Tabs */}
-          <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1">
-            <button
-              onClick={() => setCurrentIndex(0)}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                isMcq
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Section A: Aptitude
-            </button>
-            <button
-              onClick={() => {
-                if (codingCount > 0) {
-                  setCurrentIndex(codingStartIndex);
-                }
-              }}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                isCoding
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Section B: Coding
-            </button>
-            <button
-              onClick={() => {
-                if (descriptiveCount > 0) {
-                  setCurrentIndex(descriptiveStartIndex);
-                }
-              }}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                isDescriptive
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Section C: Descriptive
-            </button>
+            {/* Section Tabs - Lowered down */}
+            <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1.5 mt-2 sm:mt-2.5 border border-slate-200">
+              <button
+                onClick={() => setCurrentIndex(0)}
+                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  isMcq
+                    ? "bg-white text-blue-700 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Section A: Aptitude
+              </button>
+              <button
+                onClick={() => {
+                  if (codingCount > 0) {
+                    setCurrentIndex(codingStartIndex);
+                  }
+                }}
+                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  isCoding
+                    ? "bg-white text-blue-700 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Section B: Coding
+              </button>
+              <button
+                onClick={() => {
+                  if (descriptiveCount > 0) {
+                    setCurrentIndex(descriptiveStartIndex);
+                  }
+                }}
+                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  isDescriptive
+                    ? "bg-white text-blue-700 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Section C: Descriptive
+              </button>
+            </div>
           </div>
+
+
 
           {/* Real-Time Metrics Header */}
           <div className="flex items-center gap-3 sm:gap-6">
@@ -957,18 +960,19 @@ const Test = () => {
         </div>
       </header>
 
-      {/* Main Examination View */}
-      <main className={`max-w-7xl mx-auto w-full p-4 sm:p-6 my-2 ${(isCoding || isDescriptive) ? 'flex-1 flex flex-col min-h-0' : 'flex-1'}`}>
+      {/* Main Examination View - Full Viewport Zero Scroll Fit */}
+      <main className="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+
         {isCoding ? (
-          <div className="w-full flex flex-col min-h-[580px] space-y-4">
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
             
             {/* Section Header Card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
+            <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
               <div>
-                <span className="px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
                   Section B: Coding Round
                 </span>
-                <h2 className="text-lg font-bold text-slate-900 mt-2">
+                <h2 className="text-base font-bold text-slate-900 mt-1">
                   Coding Question {currentIndex - codingStartIndex + 1} of {codingCount}
                 </h2>
               </div>
@@ -1002,14 +1006,14 @@ const Test = () => {
             {/* Side-by-side Resizable Layout */}
             <div
               ref={codingContainerRef}
-              className={`flex-1 flex flex-col lg:flex-row min-h-[480px] ${
+              className={`flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden ${
                 isDraggingSplit ? "select-none" : ""
               }`}
             >
               {/* Left Column: Problem Description Card */}
               <div
                 style={{ width: window.innerWidth >= 1024 ? `${splitWidth}%` : "100%" }}
-                className={`w-full bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[460px] overflow-hidden ${
+                className={`w-full bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
                   isDraggingSplit ? "" : "transition-all duration-75"
                 }`}
               >
@@ -1042,19 +1046,19 @@ const Test = () => {
               {/* Right Column: Python IDE Card */}
               <div
                 style={{ width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%" }}
-                className={`w-full flex-1 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col min-h-[460px] overflow-hidden ${
+                className={`w-full flex-1 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col min-h-0 overflow-hidden ${
                   isDraggingSplit ? "" : "transition-all duration-75"
                 }`}
               >
                 {/* IDE Header */}
-                <div className="bg-slate-950 px-5 py-3 border-b border-slate-850 flex items-center justify-between shrink-0">
+                <div className="bg-slate-950 px-5 py-2.5 border-b border-slate-850 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-400 font-mono">Python 3</span>
                   </div>
                 </div>
                 
                 {/* Python Monaco Editor area */}
-                <div className="flex-1 relative overflow-hidden min-h-[340px]">
+                <div className="flex-1 relative overflow-hidden min-h-0">
                   <PythonEditor
                     value={answers[currentQuestion.questionId] || ""}
                     onChange={(val) => handleAnswer(currentQuestion.questionId, val)}
@@ -1062,7 +1066,7 @@ const Test = () => {
                 </div>
 
                 {/* Footer status bar & Run Code Action */}
-                <div className="bg-slate-950 px-5 py-2.5 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
+                <div className="bg-slate-950 px-5 py-2 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
                   <div className="flex items-center gap-4">
                     <div>
                       <span>Status: </span>
@@ -1114,8 +1118,8 @@ const Test = () => {
 
                 {/* Output Panel */}
                 {showOutputMap[currentQuestion?.questionId] && (
-                  <div className="bg-slate-950 border-t border-slate-850 p-4 flex flex-col h-[150px] shrink-0 font-mono text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-2 shrink-0">
+                  <div className="bg-slate-950 border-t border-slate-850 p-3.5 flex flex-col h-[140px] shrink-0 font-mono text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-1.5 shrink-0">
                       <div className="flex items-center gap-2">
                         <Terminal className="w-3.5 h-3.5 text-slate-400" />
                         <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Output</span>
@@ -1148,28 +1152,16 @@ const Test = () => {
                     </div>
 
                     {/* Output Content Area */}
-                    <div className="flex-1 overflow-y-auto leading-relaxed">
-                      {executionMap[currentQuestion?.questionId]?.isRunning ? (
-                        <div className="flex items-center gap-2 text-slate-400 animate-pulse py-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                          <span>Running Python program...</span>
-                        </div>
-                      ) : executionMap[currentQuestion?.questionId]?.status === "error" ? (
-                        <pre className="text-red-400 whitespace-pre-wrap font-mono text-[11px]">
-                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
+                    <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1">
+                      {executionMap[currentQuestion?.questionId]?.output && (
+                        <pre className="text-slate-200 whitespace-pre-wrap">
+                          {executionMap[currentQuestion?.questionId]?.output}
                         </pre>
-                      ) : executionMap[currentQuestion?.questionId]?.status === "empty" ? (
-                        <p className="text-amber-400 text-[11px]">
-                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
-                        </p>
-                      ) : executionMap[currentQuestion?.questionId]?.output ? (
-                        <pre className="text-slate-200 whitespace-pre-wrap font-mono text-[11px]">
-                          {String(executionMap[currentQuestion?.questionId]?.output ?? "")}
+                      )}
+                      {executionMap[currentQuestion?.questionId]?.error && (
+                        <pre className="text-red-400 whitespace-pre-wrap font-bold">
+                          {executionMap[currentQuestion?.questionId]?.error}
                         </pre>
-                      ) : (
-                        <p className="text-slate-500 italic text-[11px]">
-                          Run your Python code to see the output.
-                        </p>
                       )}
                     </div>
                   </div>
@@ -1177,67 +1169,57 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Navigation Controls at the Bottom */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
+            {/* Coding Section Navigation Controls */}
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
               <button
-                onClick={() => {
-                  if (currentIndex === codingStartIndex) {
-                    setCurrentIndex(codingStartIndex - 1);
-                  } else {
-                    handlePrevious();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Previous Question</span>
+                <span>Previous</span>
               </button>
 
               <div className="flex items-center gap-3">
-                {currentIndex === descriptiveStartIndex - 1 && descriptiveCount > 0 ? (
+                {currentIndex === (codingStartIndex + codingCount - 1) ? (
                   <button
-                    onClick={() => setCurrentIndex(descriptiveStartIndex)}
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition cursor-pointer"
+                    onClick={() => {
+                      if (descriptiveCount > 0) {
+                        setCurrentIndex(descriptiveStartIndex);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                   >
                     <span>Proceed to Descriptive Section</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                ) : currentIndex === questions.length - 1 ? (
-                  <button
-                    onClick={handleSubmit}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
-                  >
-                    <FileCheck2 className="w-4 h-4" />
-                    <span>Review & Submit</span>
-                  </button>
                 ) : (
                   <button
                     onClick={handleNext}
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                   >
-                    <span>Next Question</span>
+                    <span>Next</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
-
           </div>
         ) : isDescriptive ? (
-          <div className="w-full flex flex-col min-h-[580px] space-y-4">
+          <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
             
             {/* Section Header Card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
+            <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
               <div>
-                <span className="px-2.5 py-1 rounded-md bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
                   Section C: Descriptive Round
                 </span>
-                <h2 className="text-lg font-bold text-slate-900 mt-2">
+                <h2 className="text-base font-bold text-slate-900 mt-1">
                   Descriptive Task {currentIndex - descriptiveStartIndex + 1} of {descriptiveCount}
                 </h2>
               </div>
 
-              {/* Task Navigation Tabs */}
+              {/* Inline Palette tabs */}
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Tasks:</span>
                 {descriptiveQuestions.map((q, index) => {
@@ -1250,7 +1232,7 @@ const Test = () => {
                       onClick={() => setCurrentIndex(globalIndex)}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
                         isCurrent
-                          ? "bg-purple-600 text-white shadow-xs"
+                          ? "bg-blue-600 text-white shadow-xs"
                           : isAnswered
                           ? "bg-emerald-600 text-white"
                           : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
@@ -1263,60 +1245,85 @@ const Test = () => {
               </div>
             </div>
 
-            {/* Side-by-side Layout */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[480px]">
-              {/* Left Column: Problem Prompt Card */}
-              <div className="w-full lg:w-5/12 bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[460px] justify-between overflow-hidden">
-                <div>
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
-                    <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Task Prompt & Scenario</h3>
-                    <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded">
-                      {currentQuestion?.marks || 15} Marks
-                    </span>
-                  </div>
-                  <div className="overflow-y-auto max-h-[320px] pr-2">
-                    <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
-                      {currentQuestion?.question || currentQuestion?.text}
-                    </p>
-                  </div>
+            {/* Side-by-side Resizable Layout */}
+            <div
+              ref={codingContainerRef}
+              className={`flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden ${
+                isDraggingSplit ? "select-none" : ""
+              }`}
+            >
+              {/* Left Column: Task Prompt & Scenario Card */}
+              <div
+                style={{ width: window.innerWidth >= 1024 ? `${splitWidth}%` : "100%" }}
+                className={`w-full bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
+                  isDraggingSplit ? "" : "transition-all duration-75"
+                }`}
+              >
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
+                  <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Task Prompt & Scenario</h3>
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
+                    {currentQuestion?.marks || 10} Marks
+                  </span>
+                </div>
+                <div className="flex-1 overflow-y-auto pr-1">
+                  <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
+                    {currentQuestion?.question || currentQuestion?.text}
+                  </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                  <h4 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                    <Edit3 className="w-3.5 h-3.5 text-purple-600" />
+                {/* Guidelines Footer */}
+                <div className="mt-3 pt-2.5 border-t border-slate-100 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100 shrink-0">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-1">
+                    <FileText className="w-3.5 h-3.5 text-blue-600" />
                     <span>Notepad Guidelines</span>
-                  </h4>
+                  </div>
                   <p className="text-[11px] text-slate-600 leading-normal">
-                    Type your email or written content in the notepad area. Your text is auto-saved in real-time as you write. Use the Clear button to start fresh.
+                    Type your essay or written content in the notepad area. Your text is auto-saved in real-time as you write. Use the Clear button to start fresh.
                   </p>
                 </div>
               </div>
 
-              {/* Right Column: White Screen Notepad Card */}
-              <div className="w-full lg:w-7/12 bg-white rounded-xl border border-slate-300 shadow-md flex flex-col min-h-[460px] overflow-hidden">
-                {/* Notepad Header Bar */}
-                <div className="bg-slate-100 px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+              {/* Draggable Split Divider Bar (Desktop) */}
+              <div
+                onMouseDown={handleMouseDownSplit}
+                className="hidden lg:flex w-4 cursor-col-resize items-center justify-center bg-transparent hover:bg-blue-100/60 group transition-colors duration-150 relative z-10 shrink-0 mx-1 rounded-md"
+                title="Click and drag to adjust width between Task Prompt and Notepad Editor"
+              >
+                <div className="w-1.5 h-16 bg-slate-300 group-hover:bg-blue-600 rounded-full transition-colors flex flex-col justify-center items-center gap-1 shadow-xs">
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                </div>
+              </div>
+
+              {/* Right Column: Notepad Editor Card */}
+              <div
+                style={{ width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%" }}
+                className={`w-full flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
+                  isDraggingSplit ? "" : "transition-all duration-75"
+                }`}
+              >
+                {/* Editor Header */}
+                <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-purple-600" />
-                    <span className="text-xs font-bold text-slate-800 font-sans uppercase tracking-wider">Notepad Editor</span>
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notepad Editor</span>
                   </div>
-
                   <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-semibold text-slate-500 font-mono">
-                      {(answers[currentQuestion?.questionId] || "").trim().split(/\s+/).filter(Boolean).length} Words | {(answers[currentQuestion?.questionId] || "").length} Chars
+                    <span className="text-xs font-semibold text-slate-500">
+                      {(answers[currentQuestion?.questionId] || "").trim() ? (answers[currentQuestion?.questionId] || "").trim().split(/\s+/).length : 0} Words
                     </span>
-
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${
-                      answers[currentQuestion?.questionId] ? "text-emerald-700 bg-emerald-50 border-emerald-200" : "text-amber-700 bg-amber-50 border-amber-200"
-                    }`}>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {(answers[currentQuestion?.questionId] || "").length} Chars
+                    </span>
+                    <span className={answers[currentQuestion?.questionId] ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-bold border border-emerald-200" : "text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-bold border border-amber-200"}>
                       {answers[currentQuestion?.questionId] ? "Saved (Draft)" : "Unsaved"}
                     </span>
-
-                    {/* Clear Button */}
                     <button
                       onClick={() => handleAnswer(currentQuestion?.questionId, "")}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition cursor-pointer"
-                      title="Clear Notepad Text"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold border border-red-200 transition cursor-pointer"
+                      title="Clear editor text"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Clear</span>
@@ -1324,39 +1331,34 @@ const Test = () => {
                   </div>
                 </div>
 
-                {/* White Screen Textarea Area */}
-                <div className="p-4 sm:p-6 bg-white flex-1 flex flex-col">
+                {/* Textarea Notepad Area */}
+                <div className="flex-1 p-3.5 relative flex flex-col min-h-0 overflow-hidden">
                   <textarea
                     value={answers[currentQuestion?.questionId] || ""}
                     onChange={(e) => handleAnswer(currentQuestion?.questionId, e.target.value)}
                     placeholder="Type your response here... (Auto-saved)"
-                    className="w-full flex-1 min-h-[380px] p-4 bg-white text-slate-900 font-sans text-sm leading-relaxed border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-none shadow-inner"
+                    className="w-full flex-1 p-3.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-800 text-sm leading-relaxed resize-none font-sans"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Navigation Controls at the Bottom */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
+            {/* Descriptive Section Navigation Controls */}
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
               <button
-                onClick={() => {
-                  if (currentIndex === descriptiveStartIndex && codingCount > 0) {
-                    setCurrentIndex(descriptiveStartIndex - 1);
-                  } else {
-                    handlePrevious();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Previous Question</span>
+                <span>Previous</span>
               </button>
 
               <div className="flex items-center gap-3">
                 {currentIndex === questions.length - 1 ? (
                   <button
                     onClick={handleSubmit}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
                   >
                     <FileCheck2 className="w-4 h-4" />
                     <span>Review & Submit</span>
@@ -1364,26 +1366,25 @@ const Test = () => {
                 ) : (
                   <button
                     onClick={handleNext}
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                   >
-                    <span>Next Question</span>
+                    <span>Next</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
-
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Question Card (Left 8 cols) */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm relative min-h-[420px] flex flex-col justify-between">
-                <div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0 items-stretch overflow-hidden">
+            {/* Question Details & Option Selection Card (Left 8 cols) */}
+            <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm relative flex flex-col justify-between h-full overflow-hidden">
+                <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                   {/* Question Header */}
-                  <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-200">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 shrink-0">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+                      <span className="px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
                         Question {currentIndex + 1} of {mcqQuestions.length}
                       </span>
                       <span className="text-xs text-slate-500 font-medium">Multiple Choice</span>
@@ -1397,26 +1398,26 @@ const Test = () => {
                   </div>
 
                   {/* Question Content */}
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed mb-6">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed mb-4 shrink-0">
                     {currentQuestion?.question || currentQuestion?.text}
                   </h2>
 
-                  {/* Options List */}
-                  <div className="space-y-3">
+                  {/* Options List - Flexible layout */}
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                     {currentQuestion?.options?.map((option) => {
                       const isSelected = answers[currentQuestion.questionId] === option.optionId;
                       return (
                         <div
                           key={option.optionId}
                           onClick={() => handleAnswer(currentQuestion.questionId, option.optionId)}
-                          className={`group flex items-center gap-3.5 p-4 rounded-lg border transition cursor-pointer ${
+                          className={`group flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border transition cursor-pointer ${
                             isSelected
                               ? "bg-blue-50/80 border-blue-600 shadow-2xs"
                               : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
                           }`}
                         >
                           <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition shrink-0 ${
+                            className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition shrink-0 ${
                               isSelected
                                 ? "bg-blue-600 text-white"
                                 : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
@@ -1424,7 +1425,7 @@ const Test = () => {
                           >
                             {option.optionId}
                           </div>
-                          <span className={`text-xs sm:text-sm transition ${isSelected ? "text-blue-950 font-semibold" : "text-slate-700"}`}>
+                          <span className={`text-sm sm:text-base transition ${isSelected ? "text-blue-950 font-semibold" : "text-slate-700"}`}>
                             {option.text}
                           </span>
                         </div>
@@ -1433,12 +1434,12 @@ const Test = () => {
                   </div>
                 </div>
 
-                {/* Navigation Controls */}
-                <div className="flex items-center justify-between pt-6 mt-8 border-t border-slate-200">
+                {/* Navigation Controls - Anchored bottom bar */}
+                <div className="flex items-center justify-between pt-4 mt-3 border-t border-slate-200 shrink-0">
                   <button
                     onClick={handlePrevious}
                     disabled={currentIndex === 0}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span>Previous</span>
@@ -1454,7 +1455,7 @@ const Test = () => {
                             setCurrentIndex(descriptiveStartIndex);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                       >
                         <span>{codingCount > 0 ? "Proceed to Coding Section" : "Proceed to Descriptive Section"}</span>
                         <ChevronRight className="w-4 h-4" />
@@ -1462,7 +1463,7 @@ const Test = () => {
                     ) : (
                       <button
                         onClick={handleNext}
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                       >
                         <span>Next</span>
                         <ChevronRight className="w-4 h-4" />
@@ -1474,11 +1475,13 @@ const Test = () => {
             </div>
 
             {/* Question Palette Sidebar (Right 4 cols) */}
-            <div className="lg:col-span-4 space-y-4">
+            <div className="lg:col-span-4 flex flex-col h-full overflow-hidden">
               {renderPalette()}
             </div>
           </div>
         )}
+
+
       </main>
 
     </div>
