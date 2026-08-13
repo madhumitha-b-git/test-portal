@@ -133,7 +133,6 @@ const Test = () => {
   const [warningCount, setWarningCount] = useState(() => parseInt(localStorage.getItem("proctoringWarningCount") || "0", 10));
   const [showWarningOverlay, setShowWarningOverlay] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
-  const [shouldTerminateOnLoad, setShouldTerminateOnLoad] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [needsFullscreen, setNeedsFullscreen] = useState(false);
   const [fullscreenCountdown, setFullscreenCountdown] = useState(null);
@@ -141,6 +140,8 @@ const Test = () => {
   const awayTimerRef = useRef(null);
   const lockoutTimerRef = useRef(null);
   const isAwayRef = useRef(false);
+  const awayWarnedRef = useRef(false);
+  const lastWarningTimeRef = useRef(0);
   const sessionStartedRef = useRef(false);
   const warningInFlightRef = useRef(false);
   const initialFullscreenDoneRef = useRef(false);
@@ -196,7 +197,8 @@ const Test = () => {
           if (lastPing) {
             const timeAway = Date.now() - parseInt(lastPing, 10);
             if (timeAway > 15000) {
-              setShouldTerminateOnLoad(true);
+              // Just mark as away so they get a warning when it mounts and focuses
+              isAwayRef.current = true;
             }
           }
           // Resume existing session
@@ -352,15 +354,14 @@ const Test = () => {
     return () => clearInterval(pingInterval);
   }, [isTerminated]);
 
-  // ── Terminate on load if tab was closed too long ──
+  // ── Enforce 10 warnings limit ──
   useEffect(() => {
-    if (shouldTerminateOnLoad && !loading) {
-      terminateSession("Left exam window for more than 15 seconds");
-      setShouldTerminateOnLoad(false);
+    if (warningCount >= 10 && !isTerminated) {
+      terminateSession("Maximum warning limit exceeded (10 warnings).");
     }
-  }, [shouldTerminateOnLoad, loading, terminateSession]);
+  }, [warningCount, isTerminated, terminateSession]);
 
-  // ── Handle tab / window returning within 15s ──
+  // ── Handle tab / window returning within 10s ──
   const handleReturnFromAway = useCallback(() => {
     if (!isAwayRef.current) return;
     isAwayRef.current = false;
@@ -372,27 +373,35 @@ const Test = () => {
         .catch(() => setNeedsFullscreen(true));
     }
 
-    incrementWarning({ mailId: email, testId: testId }).then((res) => {
-      const newCount = res.data.warningCount;
-      setWarningCount(newCount);
-      localStorage.setItem("proctoringWarningCount", String(newCount));
-    }).catch(() => {});
+    if (!awayWarnedRef.current) {
+      incrementWarning({ mailId: email, testId: testId }).then((res) => {
+        const newCount = res.data.warningCount;
+        setWarningCount(newCount);
+        localStorage.setItem("proctoringWarningCount", String(newCount));
+      }).catch(() => {});
 
-    setShowWarningOverlay(true);
-    lockoutTimerRef.current = setTimeout(() => {
-      setShowWarningOverlay(false);
-    }, WARNING_LOCKOUT_MS);
+      setShowWarningOverlay(true);
+      lockoutTimerRef.current = setTimeout(() => {
+        setShowWarningOverlay(false);
+      }, WARNING_LOCKOUT_MS);
+    }
   }, [email, testId]);
 
-  // ── Start away countdown ──
+  // ── Start away state ──
   const startAwayCountdown = useCallback(() => {
     if (isAwayRef.current || isTerminated) return;
     isAwayRef.current = true;
+    
+    if (Date.now() - lastWarningTimeRef.current > 1000) {
+      awayWarnedRef.current = false;
+    } else {
+      awayWarnedRef.current = true;
+    }
 
     awayTimerRef.current = setTimeout(() => {
       isAwayRef.current = false;
-      terminateSession("Left exam window for more than 15 seconds");
-    }, TAB_RETURN_LIMIT_MS);
+      terminateSession("Left exam window for more than 10 seconds");
+    }, 10000);
   }, [isTerminated, terminateSession]);
 
   // ── Visibility change ──
@@ -429,6 +438,11 @@ const Test = () => {
   useEffect(() => {
     if (!initialFullscreenDoneRef.current) return;
     if (document.fullscreenElement || isTerminated || !needsFullscreen) return;
+
+    lastWarningTimeRef.current = Date.now();
+    if (isAwayRef.current) {
+      awayWarnedRef.current = true;
+    }
 
     setShowWarningOverlay(true);
     clearTimeout(lockoutTimerRef.current);

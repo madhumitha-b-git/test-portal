@@ -123,7 +123,7 @@ const Instructions = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
-                  <span>Exceeding warning limits will automatically terminate the test.</span>
+                  <span>Only 10 warnings are allowed. Exceeding the 10 warning limit leads to automatic termination of the exam.</span>
                 </li>
               </ul>
             </div>
