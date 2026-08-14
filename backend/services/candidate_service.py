@@ -73,55 +73,9 @@ def register_candidate(
         reg_entry["testId"] = testId
 
     if "Item" in existing_user:
-        user = existing_user["Item"]
-        stored_hash = user.get("password")
-        if stored_hash and not verify_password(password, stored_hash):
-            return {
-                "success": False,
-                "message": "Email already registered. Incorrect 4-digit PIN entered."
-            }
-
-        # Check if candidate has already submitted this testId
-        answers_table = get_answers_table()
-        is_submitted = False
-        ans_rec = answers_table.get_item(Key={"mailId": mailId}).get("Item", {})
-        if ans_rec:
-            submissions = ans_rec.get("submissions", {})
-            if testId and testId in submissions:
-                sub = submissions[testId]
-                if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
-                    is_submitted = True
-            elif testId and ans_rec.get("testId") == testId:
-                if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
-                    is_submitted = True
-
-        # Update candidate record with latest details and testId registration map
-        registrations = user.get("registrations", {})
-        if testId:
-            registrations[testId] = reg_entry
-
-        table.update_item(
-            Key={"mailId": mailId},
-            UpdateExpression="SET #n = :n, mobile = :m, college = :c, registrations = :regs",
-            ExpressionAttributeNames={"#n": "name"},
-            ExpressionAttributeValues={
-                ":n": name,
-                ":m": mobile,
-                ":c": college,
-                ":regs": registrations,
-            }
-        )
-
         return {
-            "success": True,
-            "message": "Account verified successfully",
-            "user": {
-                "name": name or user.get("name", ""),
-                "mailId": mailId,
-                "mobile": mobile or user.get("mobile", ""),
-                "college": college or user.get("college", ""),
-            },
-            "isSubmitted": is_submitted
+            "success": False,
+            "message": "Email already registered. You can log in using your 4-digit PIN."
         }
 
     hashed_pw = hash_password(password)

@@ -300,76 +300,17 @@ const Login = () => {
         })
       );
 
-      // If candidate already submitted this specific test, notify and navigate to ThankYou
-      if (res.data?.isSubmitted) {
-        setErrors({ api: "You are already registered and have completed this assessment. Redirecting to summary page..." });
-        localStorage.setItem("testSubmitted", "true");
-        localStorage.setItem("submittedTestId", currentTestId);
-        localStorage.setItem("terminationReason", `You have already submitted this assessment (Link ID: ${linkId || ""}).`);
-        setTimeout(() => {
-          navigate("/thankyou", { replace: true });
-        }, 1200);
-        return;
-      }
-
       navigate("/instructions");
     } catch (error) {
       const message = error.response?.data?.detail || "Registration failed. Please check your details and try again.";
       const normalizedMail = regData.mailId.trim().toLowerCase();
-      const currentTestId = testInfo.testId || localStorage.getItem("testId") || "";
 
-      // Auto-fallback: If email is already registered, verify candidate PIN and log in
+      // If email is already registered, switch to Login tab so candidate can enter 4-digit PIN to log in
       if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exist")) {
-        try {
-          const loginRes = await loginCandidate({
-            mailId: normalizedMail,
-            password: regData.password,
-            testId: currentTestId,
-          });
-          if (loginRes.data?.success) {
-            const userProfile = loginRes.data.user || {};
-            localStorage.removeItem("questions");
-            localStorage.removeItem("answers");
-            localStorage.removeItem("currentIndex");
-            localStorage.removeItem("proctoringStartedTime");
-            localStorage.removeItem("proctoringWarningCount");
-            localStorage.removeItem("proctoringStatus");
-            localStorage.removeItem("testSubmitted");
-            localStorage.removeItem("testTerminated");
-            localStorage.removeItem("terminationReason");
-
-            localStorage.setItem(
-              "candidate",
-              JSON.stringify({
-                name: userProfile.name || regData.name.trim(),
-                mailId: userProfile.mailId || normalizedMail,
-                college: userProfile.college || regData.college.trim(),
-                mobile: userProfile.mobile || regData.mobile.trim(),
-              })
-            );
-
-            if (loginRes.data?.isSubmitted) {
-              setErrors({ api: "You are already registered and have completed this assessment. Redirecting to summary page..." });
-              localStorage.setItem("testSubmitted", "true");
-              localStorage.setItem("submittedTestId", currentTestId);
-              localStorage.setItem("terminationReason", `You have already submitted this assessment (Link ID: ${linkId || ""}).`);
-              setTimeout(() => {
-                navigate("/thankyou", { replace: true });
-              }, 1200);
-              return;
-            }
-
-            setErrors({ api: "You are already registered! Logging you in now..." });
-            setTimeout(() => {
-              navigate("/instructions");
-            }, 1000);
-            return;
-          }
-        } catch (loginErr) {
-          const pinErrMsg = loginErr.response?.data?.detail || "Email already registered. Incorrect 4-digit PIN entered.";
-          setErrors({ api: pinErrMsg });
-          return;
-        }
+        setLoginData((prev) => ({ ...prev, mailId: normalizedMail }));
+        setErrors({ api: "You are already registered with this email. Please log in using your 4-digit PIN." });
+        setActiveTab("login");
+        return;
       }
 
       setErrors({ api: message });
