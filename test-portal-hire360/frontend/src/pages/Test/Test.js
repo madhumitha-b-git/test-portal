@@ -299,6 +299,7 @@ const Test = () => {
       if (!sectionsMap[sId]) {
         sectionsMap[sId] = {
           sectionId: sId,
+          sectionName: q.questionType === "DESCRIPTIVE" ? "DESCRIPTIVE" : (q.questionType === "CODING" ? "CODING" : "MCQ"),
           responses: []
         };
       }
@@ -587,6 +588,7 @@ const Test = () => {
         if (!sectionsMap[sId]) {
           sectionsMap[sId] = {
             sectionId: sId,
+            sectionName: q.questionType === "DESCRIPTIVE" ? "DESCRIPTIVE" : (q.questionType === "CODING" ? "CODING" : "MCQ"),
             responses: []
           };
         }
