@@ -494,7 +494,7 @@ const Login = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 my-6">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         
         {/* ========================================================================= */}
         {/* 1. LOADING STATE */}
@@ -703,7 +703,7 @@ const Login = () => {
 
                 {/* TAB 1: REGISTRATION FORM */}
                 {activeTab === "register" && (
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3">
                     
                     {/* Full Name */}
                     <div>
