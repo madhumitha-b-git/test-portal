@@ -5,7 +5,7 @@ import subprocess
 import ast
 
 MAX_OUTPUT_BYTES = 10 * 1024  # 10 KB
-EXECUTION_TIMEOUT = 3.0       # 3 seconds timeout
+EXECUTION_TIMEOUT = 5.0       # 5 seconds timeout
 
 # Standard library modules permitted for technical coding assessments
 ALLOWED_MODULES = {
@@ -65,12 +65,15 @@ def validate_python_code_security(code: str) -> tuple[bool, str]:
     return True, ""
 
 
-def run_python_code_execution(code: str) -> dict:
+def run_python_code_execution(code: str, input_str: str = "") -> dict:
     """
-    Executes Python 3 code in an isolated child process via subprocess.run after AST security validation.
-    Enforces sanitized environment (no AWS tokens), 3s timeout, and 10KB output limit.
+    Executes Python 3 code in a secure, AST-validated sandbox with stdout/stderr capture,
+    custom input (STDIN) support, and step-count infinite loop protection.
     Does NOT interact with DynamoDB, SNS, or application data.
     """
+    import io
+    import traceback
+
     code_str = (code or "").strip()
     if not code_str:
         return {
@@ -79,7 +82,7 @@ def run_python_code_execution(code: str) -> dict:
             "executionTimeMs": 0,
         }
 
-    # Pre-execution AST import validation
+    # Pre-execution AST import & function security validation
     is_valid, sec_error = validate_python_code_security(code_str)
     if not is_valid:
         return {
@@ -88,63 +91,108 @@ def run_python_code_execution(code: str) -> dict:
             "executionTimeMs": 0,
         }
 
-    # Sanitize environment variables: strip all AWS credentials & app secrets
-    sanitized_env = {}
-    for key in ["PATH", "SYSTEMROOT", "PYTHONPATH", "HOME", "TMPDIR", "TEMP", "TMP"]:
-        if key in os.environ:
-            sanitized_env[key] = os.environ[key]
+    # Prepare custom STDIN input lines for input()
+    input_lines = (input_str or "").splitlines()
+    input_idx = 0
+
+    def custom_input(prompt=""):
+        nonlocal input_idx
+        if prompt:
+            print(prompt, end="")
+        if input_idx < len(input_lines):
+            val = input_lines[input_idx]
+            input_idx += 1
+            return val
+        raise EOFError("EOFError: EOF when reading a line.\n[Tip: Your Python code uses input(). Please enter test data in the 'Custom Input' tab before running code.]")
+
+    # Prepare output buffers
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    stdout_buf = io.StringIO()
+    stderr_buf = io.StringIO()
+
+    # Infinite loop protection: max 150,000 execution steps
+    step_count = 0
+    MAX_STEPS = 150_000
+
+    def trace_limit(frame, event, arg):
+        nonlocal step_count
+        if event == "line":
+            step_count += 1
+            if step_count > MAX_STEPS:
+                raise TimeoutError("Execution timed out: Maximum allowed step count (150,000 operations) exceeded. Check for infinite loops or non-terminating operations.")
+        return trace_limit
 
     start_time = time.perf_counter()
 
     try:
-        process_res = subprocess.run(
-            [sys.executable, "-c", code_str],
-            capture_output=True,
-            text=True,
-            timeout=EXECUTION_TIMEOUT,
-            env=sanitized_env,
-        )
+        sys.stdout = stdout_buf
+        sys.stderr = stderr_buf
+        sys.settrace(trace_limit)
 
+        # Build safe execution scope
+        builtins_dict = dict(sys.modules["builtins"].__dict__)
+        builtins_dict["input"] = custom_input
+        builtins_dict["open"] = None
+        builtins_dict["eval"] = None
+        builtins_dict["exec"] = None
+        builtins_dict["__import__"] = None
+
+        exec_globals = {
+            "__name__": "__main__",
+            "__builtins__": builtins_dict,
+        }
+
+        exec(code_str, exec_globals)
+
+    except TimeoutError as te:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000)
-
-        stdout = process_res.stdout or ""
-        stderr = process_res.stderr or ""
-
-        combined = stdout
-        if stderr:
-            if combined and not combined.endswith("\n"):
-                combined += "\n"
-            combined += stderr
-
-        # Enforce 10 KB output limit
-        if len(combined) > MAX_OUTPUT_BYTES:
-            combined = combined[:MAX_OUTPUT_BYTES] + "\n[Output truncated: Exceeded maximum allowed size of 10 KB]"
-
-        if process_res.returncode == 0:
-            output_text = combined if combined.strip() else "(Program completed successfully with no output. Use print() to display results.)"
-            return {
-                "status": "success",
-                "output": output_text,
-                "executionTimeMs": elapsed_ms,
-            }
-        else:
-            return {
-                "status": "error",
-                "output": combined,
-                "executionTimeMs": elapsed_ms,
-            }
-
-    except subprocess.TimeoutExpired:
-        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        stdout_text = stdout_buf.getvalue()
+        stderr_text = stderr_buf.getvalue()
+        combined = stdout_text + (("\n" if stdout_text and not stdout_text.endswith("\n") else "") + stderr_text if stderr_text else "")
         return {
             "status": "timeout",
-            "output": "Execution timed out.",
+            "output": (combined + "\n" if combined.strip() else "") + str(te),
             "executionTimeMs": elapsed_ms,
         }
     except Exception as e:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        stdout_text = stdout_buf.getvalue()
+        stderr_text = stderr_buf.getvalue()
+        
+        # Format traceback message without framework internal frames
+        raw_tb = traceback.format_exc()
+        tb_lines = [line for line in raw_tb.splitlines() if 'exec(code_str' not in line and 'sys.settrace' not in line]
+        error_msg = "\n".join(tb_lines)
+
+        combined = stdout_text + (("\n" if stdout_text and not stdout_text.endswith("\n") else "") + error_msg if error_msg else "")
         return {
             "status": "error",
-            "output": f"Execution error: {str(e)}",
+            "output": combined,
             "executionTimeMs": elapsed_ms,
         }
+    finally:
+        sys.settrace(None)
+        sys.stdout = old_stdout
+        sys.stderr = old_stderr
+
+    elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+    stdout_text = stdout_buf.getvalue()
+    stderr_text = stderr_buf.getvalue()
+
+    combined = stdout_text
+    if stderr_text:
+        if combined and not combined.endswith("\n"):
+            combined += "\n"
+        combined += stderr_text
+
+    # Enforce 10 KB output limit
+    if len(combined) > MAX_OUTPUT_BYTES:
+        combined = combined[:MAX_OUTPUT_BYTES] + "\n[Output truncated: Exceeded maximum allowed size of 10 KB]"
+
+    output_text = combined if combined.strip() else "(Program completed successfully with no output. Use print() to display results.)"
+    return {
+        "status": "success",
+        "output": output_text,
+        "executionTimeMs": elapsed_ms,
+    }

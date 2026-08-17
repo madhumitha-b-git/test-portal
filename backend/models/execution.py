@@ -3,6 +3,7 @@ from pydantic import BaseModel, field_validator
 class ExecuteRequest(BaseModel):
     """Request model for POST /execute endpoint"""
     code: str
+    input: str = ""
 
     @field_validator("code")
     @classmethod
