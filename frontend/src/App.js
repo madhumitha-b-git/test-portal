@@ -20,11 +20,15 @@ function LoginGuard({ children }) {
   }
 
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const isStarted = localStorage.getItem("testStarted") === "true";
   const submittedTestId = localStorage.getItem("submittedTestId");
   const currentTestId = localStorage.getItem("testId");
 
   if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
+  }
+  if (isStarted && !isSubmitted) {
+    return <Navigate to="/test" replace />;
   }
   return children;
 }
@@ -32,6 +36,7 @@ function LoginGuard({ children }) {
 function InstructionsGuard({ children }) {
   const candidate = localStorage.getItem("candidate");
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+  const isStarted = localStorage.getItem("testStarted") === "true";
   const submittedTestId = localStorage.getItem("submittedTestId");
   const currentTestId = localStorage.getItem("testId");
 
@@ -40,6 +45,9 @@ function InstructionsGuard({ children }) {
   }
   if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
+  }
+  if (isStarted && !isSubmitted) {
+    return <Navigate to="/test" replace />;
   }
   return children;
 }

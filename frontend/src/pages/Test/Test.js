@@ -439,6 +439,25 @@ const Test = () => {
     };
   }, [isTerminated, startAwayCountdown, handleReturnFromAway]);
 
+  // ── Strict Browser Back Navigation Lockout (Proctoring Rule) ──
+  useEffect(() => {
+    // Mark test session as active
+    localStorage.setItem("testStarted", "true");
+
+    // Push dummy history entry to disable browser back button
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = (e) => {
+      // Keep candidate trapped on the test page
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   // ── Fullscreen warning ──
   useEffect(() => {
     if (!initialFullscreenDoneRef.current) return;
