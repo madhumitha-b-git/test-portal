@@ -73,6 +73,14 @@ const Login = () => {
 
   // Validate Link on mount or when linkId changes
   useEffect(() => {
+    // If candidate has an active test session in progress, auto-redirect immediately back to test
+    const isStarted = localStorage.getItem("testStarted") === "true";
+    const isSubmitted = localStorage.getItem("testSubmitted") === "true";
+    if (isStarted && !isSubmitted) {
+      navigate("/test", { replace: true });
+      return;
+    }
+
     const validateLink = async () => {
       setValidatingLink(true);
       setLinkError(null);

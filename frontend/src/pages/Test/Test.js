@@ -439,22 +439,70 @@ const Test = () => {
     };
   }, [isTerminated, startAwayCountdown, handleReturnFromAway]);
 
-  // ── Strict Browser Back Navigation Lockout (Proctoring Rule) ──
+  // ── Strict Browser Back Navigation Lockout & Mouse Swipe Interception ──
   useEffect(() => {
     // Mark test session as active
     localStorage.setItem("testStarted", "true");
 
-    // Push dummy history entry to disable browser back button
-    window.history.pushState(null, "", window.location.href);
+    // Fill history stack with 50 duplicate /test states to neutralize multi-step mouse swipes
+    const fillHistoryBuffer = () => {
+      for (let i = 0; i < 50; i++) {
+        window.history.pushState({ page: "test_lockout" }, "", window.location.href);
+      }
+    };
+
+    fillHistoryBuffer();
 
     const handlePopState = (e) => {
-      // Keep candidate trapped on the test page
-      window.history.pushState(null, "", window.location.href);
+      fillHistoryBuffer();
+    };
+
+    const blockMouseBackForward = (e) => {
+      // Button 3 = Mouse Back (Side Button 1 / Swipe Left)
+      // Button 4 = Mouse Forward (Side Button 2 / Swipe Right)
+      if (e.button === 3 || e.button === 4 || e.button === 5) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    const blockKeyboardBackNav = (e) => {
+      const key = e.key;
+      // Block Alt + Left / Alt + Right shortcuts
+      if (e.altKey && (key === "ArrowLeft" || key === "ArrowRight" || e.code === "ArrowLeft" || e.code === "ArrowRight")) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block BrowserBack / AppBack keys
+      if (key === "BrowserBack" || key === "BrowserForward" || key === "AppBack" || key === "AppForward") {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+      // Block Backspace outside text input/textarea
+      if (key === "Backspace") {
+        const targetTag = e.target?.tagName ? e.target.tagName.toUpperCase() : "";
+        const isEditable = e.target?.isContentEditable;
+        if (targetTag !== "INPUT" && targetTag !== "TEXTAREA" && !isEditable) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener("mouseup", blockMouseBackForward, true);
+    window.addEventListener("mousedown", blockMouseBackForward, true);
+    window.addEventListener("keydown", blockKeyboardBackNav, true);
+
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("mouseup", blockMouseBackForward, true);
+      window.removeEventListener("mousedown", blockMouseBackForward, true);
+      window.removeEventListener("keydown", blockKeyboardBackNav, true);
     };
   }, []);
 
