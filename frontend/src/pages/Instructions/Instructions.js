@@ -8,25 +8,8 @@ import { fetchQuestions } from "../../services/api";
 const Instructions = () => {
   const navigate = useNavigate();
   const [accepted, setAccepted] = useState(false);
-  const [hasExtension, setHasExtension] = useState(false);
   const [duration, setDuration] = useState(() => parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10));
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
-
-  useEffect(() => {
-    // Sider AI and similar extensions often inject these elements
-    const checkExtensions = () => {
-      const siderElement = document.querySelector('div#sider-ai, sider-app, chatreply-app, div[id^="sider-"], grammarly-extension');
-      if (siderElement) {
-        setHasExtension(true);
-      } else {
-        setHasExtension(false);
-      }
-    };
-    
-    checkExtensions();
-    const interval = setInterval(checkExtensions, 1500);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     // If test is already started or in progress, auto-redirect candidate back to test portal
@@ -68,7 +51,7 @@ const Instructions = () => {
   }, [navigate]);
 
   const handleStartTest = () => {
-    if (!accepted || hasExtension) return;
+    if (!accepted) return;
     localStorage.setItem("testStarted", "true");
     navigate("/test", { replace: true });
   };
@@ -177,21 +160,6 @@ const Instructions = () => {
             </div>
           </div>
 
-          {/* Extension Warning Banner */}
-          {hasExtension && (
-            <div className="mt-6 p-4 rounded-lg bg-red-50 border border-red-200 flex flex-col gap-2 text-sm text-red-800">
-              <div className="flex items-center gap-2 font-bold">
-                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                <span>Browser Extension Detected!</span>
-              </div>
-              <p className="pl-7 text-xs">
-                We have detected a browser extension (like Sider AI, Monica, Grammarly, or similar tools) active on this page. 
-                You must <strong>disable the extension</strong> or use an Incognito window to start the exam. 
-                Once disabled, this warning will disappear automatically.
-              </p>
-            </div>
-          )}
-
           {/* Acceptance Checkbox */}
           <div className="mt-6 pt-6 border-t border-slate-200">
             <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -211,14 +179,14 @@ const Instructions = () => {
           <div className="mt-6">
             <button
               onClick={handleStartTest}
-              disabled={!accepted || hasExtension}
+              disabled={!accepted}
               className={`w-full py-3 px-6 rounded-lg font-semibold text-sm shadow-xs transition duration-150 flex items-center justify-center gap-2 cursor-pointer ${
-                accepted && !hasExtension
+                accepted
                   ? "bg-blue-600 hover:bg-blue-700 text-white"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
               }`}
             >
-              <span>{hasExtension ? "Disable Extensions to Start" : "Begin Assessment"}</span>
+              <span>Begin Assessment</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
