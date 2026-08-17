@@ -28,9 +28,12 @@ const Login = () => {
   const navigate = useNavigate();
   const { linkId: paramLinkId } = useParams();
   
-  // Extract linkId from params or directly from pathname fallback (e.g. /846764)
+  // Extract linkId from URL params, query string (?linkId=208035), or pathname fallback (e.g. /208035)
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryLinkId = urlParams.get("linkId");
   const pathnameSegment = window.location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const linkId = paramLinkId || (pathnameSegment && pathnameSegment !== "index.html" ? pathnameSegment : "");
+  const pathLinkId = pathnameSegment && !["index.html", "instructions", "test", "review", "thankyou"].includes(pathnameSegment) ? pathnameSegment : "";
+  const linkId = paramLinkId || queryLinkId || pathLinkId || "";
 
   // Link validation state
   const [validatingLink, setValidatingLink] = useState(true);
@@ -383,21 +386,20 @@ const Login = () => {
       try {
         const sessionsRes = await fetchProctoringSessions();
         const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
-        const currentTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
-        const currentLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
+        const activeTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
+        const activeLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
+
         const mySessions = sessions.filter((s) => {
           const matchEmail = (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail;
           const sTest = String(s.testId || "").trim();
           const sLink = String(s.linkId || "").trim();
-          const currentTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
-          const currentLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
 
-          // Strictly match testId or linkId ONLY for this specific assessment
+          // Strictly match NON-EMPTY testId or linkId ONLY for this specific assessment
           let matchTest = false;
-          if (currentTestId && (sTest === currentTestId || sLink === currentTestId)) {
+          if (activeTestId && ((sTest && sTest === activeTestId) || (sLink && sLink === activeTestId))) {
             matchTest = true;
           }
-          if (currentLinkId && (sTest === currentLinkId || sLink === currentLinkId)) {
+          if (activeLinkId && ((sTest && sTest === activeLinkId) || (sLink && sLink === activeLinkId))) {
             matchTest = true;
           }
 

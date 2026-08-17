@@ -152,14 +152,12 @@ def login_candidate(
     ans_rec = answers_table.get_item(Key={"mailId": user_mail_id}).get("Item", {})
     if ans_rec:
         submissions = ans_rec.get("submissions", {})
-        if testId and testId in submissions:
-            sub = submissions[testId]
+        clean_test_id = (testId or "").strip()
+        if clean_test_id and clean_test_id in submissions:
+            sub = submissions[clean_test_id]
             if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
                 is_submitted = True
-        elif testId and ans_rec.get("testId") == testId:
-            if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
-                is_submitted = True
-        elif not testId:
+        elif clean_test_id and ans_rec.get("testId") == clean_test_id:
             if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
                 is_submitted = True
 
