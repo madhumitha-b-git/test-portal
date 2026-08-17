@@ -73,7 +73,24 @@ const Login = () => {
 
   // Validate Link on mount or when linkId changes
   useEffect(() => {
-    // If candidate has an active test session in progress, auto-redirect immediately back to test
+    // Detect if candidate is opening a new/different linkId than what is cached in localStorage
+    const cachedLinkId = localStorage.getItem("linkId");
+    if (linkId && cachedLinkId && String(linkId).trim() !== String(cachedLinkId).trim()) {
+      localStorage.removeItem("testStarted");
+      localStorage.removeItem("testSubmitted");
+      localStorage.removeItem("submittedTestId");
+      localStorage.removeItem("testTerminated");
+      localStorage.removeItem("terminationReason");
+      localStorage.removeItem("questions");
+      localStorage.removeItem("answers");
+      localStorage.removeItem("currentIndex");
+      localStorage.removeItem("proctoringStartedTime");
+      localStorage.removeItem("proctoringWarningCount");
+      localStorage.removeItem("proctoringStatus");
+      localStorage.removeItem("lastPing");
+    }
+
+    // If candidate has an active test session in progress for THIS test, auto-redirect immediately back to test
     const isStarted = localStorage.getItem("testStarted") === "true";
     const isSubmitted = localStorage.getItem("testSubmitted") === "true";
     if (isStarted && !isSubmitted) {
@@ -118,6 +135,7 @@ const Login = () => {
       // If candidate is switching to a different testId, clear old test session state
       const currentStoredTestId = localStorage.getItem("testId");
       if (currentStoredTestId && currentStoredTestId !== test.testId) {
+        localStorage.removeItem("testStarted");
         localStorage.removeItem("testSubmitted");
         localStorage.removeItem("submittedTestId");
         localStorage.removeItem("testTerminated");
@@ -141,9 +159,8 @@ const Login = () => {
       setValidatingLink(false);
     };
 
-
     validateLink();
-  }, [linkId]);
+  }, [linkId, navigate]);
 
   // Handle register inputs (password/confirmPassword are 4-digit PINs)
   const handleRegChange = (e) => {
@@ -372,12 +389,18 @@ const Login = () => {
           const matchEmail = (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail;
           const sTest = String(s.testId || "").trim();
           const sLink = String(s.linkId || "").trim();
-          const matchTest = (sTest || sLink) ? (
-            (currentTestId && sTest === currentTestId) ||
-            (currentLinkId && sTest === currentLinkId) ||
-            (currentLinkId && sLink === currentLinkId) ||
-            (currentTestId && sLink === currentTestId)
-          ) : true;
+          const currentTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
+          const currentLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
+
+          // Strictly match testId or linkId ONLY for this specific assessment
+          let matchTest = false;
+          if (currentTestId && (sTest === currentTestId || sLink === currentTestId)) {
+            matchTest = true;
+          }
+          if (currentLinkId && (sTest === currentLinkId || sLink === currentLinkId)) {
+            matchTest = true;
+          }
+
           return matchEmail && matchTest;
         });
 

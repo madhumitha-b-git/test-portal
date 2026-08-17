@@ -330,6 +330,8 @@ const Test = () => {
 
     submitProctoringReport({
       mailId: mailId,
+      testId: testId,
+      linkId: localStorage.getItem("linkId") || "",
       startedTime: startedTime,
       endedTime: endedTime,
       status: "TERMINATED",
@@ -689,6 +691,8 @@ const Test = () => {
 
       submitProctoringReport({
         mailId: mailId,
+        testId: testId,
+        linkId: localStorage.getItem("linkId") || "",
         startedTime: startedTime,
         endedTime: endedTime,
         status: "SUCCESS",

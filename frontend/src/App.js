@@ -14,8 +14,15 @@ function LoginGuard({ children }) {
   const currentLinkId = queryLinkId || pathLinkId;
   const cachedLinkId = localStorage.getItem("linkId");
 
-  // If candidate is opening a NEW linkId, bypass old test redirect guards
+  // If candidate is opening a NEW linkId, clear old test state and bypass redirect guards
   if (currentLinkId && cachedLinkId && String(currentLinkId).trim() !== String(cachedLinkId).trim()) {
+    localStorage.removeItem("testStarted");
+    localStorage.removeItem("testSubmitted");
+    localStorage.removeItem("submittedTestId");
+    localStorage.removeItem("testTerminated");
+    localStorage.removeItem("terminationReason");
+    localStorage.removeItem("questions");
+    localStorage.removeItem("answers");
     return children;
   }
 
