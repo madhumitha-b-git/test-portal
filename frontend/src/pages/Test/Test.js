@@ -487,7 +487,8 @@ const Test = () => {
       if (key === "Backspace") {
         const targetTag = e.target?.tagName ? e.target.tagName.toUpperCase() : "";
         const isEditable = e.target?.isContentEditable;
-        if (targetTag !== "INPUT" && targetTag !== "TEXTAREA" && !isEditable) {
+        const isMonaco = e.target?.closest && e.target.closest('.monaco-editor');
+        if (targetTag !== "INPUT" && targetTag !== "TEXTAREA" && !isEditable && !isMonaco) {
           e.preventDefault();
           e.stopPropagation();
           return false;
@@ -631,7 +632,7 @@ const Test = () => {
     document.addEventListener("keydown", blockCopyPasteAndZoom);
     document.addEventListener("wheel", blockWheelZoom, { passive: false });
     document.addEventListener("keydown", blockFunctionKeys);
-    document.addEventListener("contextmenu", blockRightClick);
+    document.addEventListener("contextmenu", blockRightClick, true);
     document.addEventListener("cut", blockCut);
     document.addEventListener("paste", blockPaste);
     document.addEventListener("copy", blockCopy);
@@ -643,7 +644,7 @@ const Test = () => {
       document.removeEventListener("keydown", blockCopyPasteAndZoom);
       document.removeEventListener("wheel", blockWheelZoom);
       document.removeEventListener("keydown", blockFunctionKeys);
-      document.removeEventListener("contextmenu", blockRightClick);
+      document.removeEventListener("contextmenu", blockRightClick, true);
       document.removeEventListener("cut", blockCut);
       document.removeEventListener("paste", blockPaste);
       document.removeEventListener("copy", blockCopy);
