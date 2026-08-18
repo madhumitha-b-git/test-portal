@@ -11,24 +11,39 @@ const Instructions = () => {
   const [duration, setDuration] = useState(() => parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10));
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
 
+  const [sectionsSummary, setSectionsSummary] = useState([]);
+
   useEffect(() => {
     const loadTestDuration = async () => {
       try {
-        const cachedDuration = localStorage.getItem("totalDurationMinutes");
-        if (cachedDuration) {
-          setDuration(parseInt(cachedDuration, 10));
-          return;
-        }
-
         const linkId = localStorage.getItem("linkId");
         const response = await fetchQuestions(linkId);
         const testDuration = response.data.totalDurationMinutes || 60;
         setDuration(testDuration);
 
         // Pre-cache test details to avoid loading states in the test dashboard
-        localStorage.setItem("questions", JSON.stringify(response.data.questions));
+        const fetchedQuestions = response.data.questions || [];
+        localStorage.setItem("questions", JSON.stringify(fetchedQuestions));
+        if (response.data.sections) {
+          localStorage.setItem("sections", JSON.stringify(response.data.sections));
+        }
         localStorage.setItem("testId", response.data.testId);
         localStorage.setItem("totalDurationMinutes", testDuration.toString());
+
+        // Build section summary list
+        const secMap = {};
+        fetchedQuestions.forEach(q => {
+          const sId = q.sectionId || "default";
+          if (!secMap[sId]) {
+            secMap[sId] = {
+              name: q.sectionName || "Section",
+              count: 0,
+              type: q.questionType || "MCQ"
+            };
+          }
+          secMap[sId].count += 1;
+        });
+        setSectionsSummary(Object.values(secMap));
       } catch (err) {
         console.error("Failed to load test metadata:", err);
       }
@@ -85,7 +100,19 @@ const Instructions = () => {
               <ul className="space-y-2.5 text-xs text-slate-700">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>The test contains 3 sections: <strong>10 MCQs</strong>, <strong>2 Coding questions</strong>, & <strong>2 Descriptive Notepad tasks</strong>.</span>
+                  <span>
+                    The test contains {sectionsSummary.length > 0 ? `${sectionsSummary.length} section(s)` : "multiple sections"}:{" "}
+                    {sectionsSummary.length > 0 ? (
+                      sectionsSummary.map((s, idx) => (
+                        <span key={idx}>
+                          <strong>{s.name}</strong> ({s.count} {s.type} question{s.count !== 1 ? "s" : ""})
+                          {idx < sectionsSummary.length - 1 ? ", " : "."}
+                        </span>
+                      ))
+                    ) : (
+                      "MCQs, Coding, and Descriptive questions."
+                    )}
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

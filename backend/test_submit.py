@@ -20,5 +20,6 @@ data = {
 }
 
 res = requests.post("http://127.0.0.1:8000/submit", json=data)
+# res = requests.post("https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com/submit", json=data)
 print(res.status_code)
 print(res.json())

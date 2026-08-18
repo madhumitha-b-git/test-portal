@@ -30,20 +30,20 @@ def publish_test_submitted_event(
     for section in sections:
         sec_id = section.get("sectionId", "")
         sec_name = section.get("sectionName", "")
+        sec_type = section.get("questionType", "")
         responses = section.get("responses", [])
         
         if not sec_name:
-            sec_name = "MCQ"
-            if "DESCRIPTIVE" in str(sec_id).upper():
-                sec_name = "DESCRIPTIVE"
-            elif len(responses) > 0 and "typedAnswer" in responses[0]:
-                sec_name = "CODING"
+            sec_name = sec_type or "MCQ"
                 
-        mapped_sections.append({
+        sec_item = {
             "sectionId": sec_id,
             "sectionName": sec_name,
             "responses": responses
-        })
+        }
+        if sec_type:
+            sec_item["questionType"] = sec_type
+        mapped_sections.append(sec_item)
 
     event = {
         "mailId": mail_id,

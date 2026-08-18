@@ -3,6 +3,7 @@ import axios from "axios";
 // Base URL of FastAPI backend
 const API = axios.create({
   baseURL: "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com",
+  // baseURL: "http://127.0.0.1:8000",
   //"",
   headers: {
     "Content-Type": "application/json",
@@ -84,20 +85,40 @@ export const fetchQuestions = async (linkId) => {
     testToUse = { sections: [], testId: "" };
   }
   
-  // Flatten questions from all sections and inject section metadata
+  // Fisher-Yates Shuffle Utility
+  const shuffleArray = (array) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // Flatten questions from all sections, apply section-level question/option shuffling, and inject section metadata
   const flattenedQuestions = [];
   const sections = testToUse.sections || [];
   
   sections.forEach((section) => {
-    const qs = section.questions || [];
+    let qs = section.questions || [];
+    if (section.shuffleQuestions) {
+      qs = shuffleArray(qs);
+    }
+    
     qs.forEach((q) => {
-      const qType = section.questionType || q.type || (
-        section.sectionName === "CODING" ? "CODING" : 
-        section.sectionName === "DESCRIPTIVE" ? "DESCRIPTIVE" : 
+      let options = q.options || [];
+      if (section.shuffleOptions && Array.isArray(options)) {
+        options = shuffleArray(options);
+      }
+
+      const qType = section.questionType || q.questionType || q.type || (
+        (section.sectionName || "").toUpperCase().includes("CODING") ? "CODING" : 
+        (section.sectionName || "").toUpperCase().includes("DESCRIPTIVE") ? "DESCRIPTIVE" : 
         "MCQ"
       );
       flattenedQuestions.push({
         ...q,
+        options,
         sectionId: section.sectionId,
         sectionName: section.sectionName,
         questionType: qType,
@@ -105,61 +126,19 @@ export const fetchQuestions = async (linkId) => {
     });
   });
 
-  // Ensure default Coding & Descriptive questions exist if section items are missing
-  const hasCoding = flattenedQuestions.some(q => q.questionType === "CODING");
-  const hasDescriptive = flattenedQuestions.some(q => q.questionType === "DESCRIPTIVE");
-
-  if (!hasCoding) {
-    flattenedQuestions.push(
-      {
-        questionId: "c001",
-        sectionId: "sec_coding",
-        sectionName: "CODING",
-        questionType: "CODING",
-        marks: 15,
-        question: "Reverse Words in a String:\n\nWrite a Python function `reverse_words(sentence: str) -> str` that accepts a string of words separated by spaces and returns a string with the words in reverse order.\n\nExample:\nInput: 'hello world python'\nOutput: 'python world hello'",
-        text: "Reverse Words in a String:\n\nWrite a Python function `reverse_words(sentence: str) -> str` that accepts a string of words separated by spaces and returns a string with the words in reverse order."
-      },
-      {
-        questionId: "c002",
-        sectionId: "sec_coding",
-        sectionName: "CODING",
-        questionType: "CODING",
-        marks: 15,
-        question: "Check Palindrome String:\n\nWrite a Python function `is_palindrome(s: str) -> bool` that determines if a given string is a palindrome, ignoring spaces, punctuation, and letter casing.\n\nExample:\nInput: 'A man, a plan, a canal: Panama'\nOutput: True",
-        text: "Check Palindrome String:\n\nWrite a Python function `is_palindrome(s: str) -> bool` that determines if a given string is a palindrome, ignoring spaces, punctuation, and letter casing."
-      }
-    );
-  }
-
-  if (!hasDescriptive) {
-    flattenedQuestions.push(
-      {
-        questionId: "d001",
-        sectionId: "sec_descriptive",
-        sectionName: "DESCRIPTIVE",
-        questionType: "DESCRIPTIVE",
-        marks: 15,
-        question: "Email Composition Task:\n\nWrite a professional email to a corporate client explaining a minor 2-day delay in project delivery due to unexpected API integration testing. Outline the revised timeline, key milestones completed, and the proactive measures taken to ensure top quality.",
-        text: "Email Composition Task:\n\nWrite a professional email to a corporate client explaining a minor 2-day delay in project delivery due to unexpected API integration testing. Outline the revised timeline, key milestones completed, and the proactive measures taken to ensure top quality."
-      },
-      {
-        questionId: "d002",
-        sectionId: "sec_descriptive",
-        sectionName: "DESCRIPTIVE",
-        questionType: "DESCRIPTIVE",
-        marks: 15,
-        question: "Technical Overview & Proposal:\n\nDraft a concise technical overview (3-4 paragraphs) explaining the key differences, benefits, and architectural considerations of Microservices versus Monolithic software applications for a non-technical corporate stakeholder.",
-        text: "Technical Overview & Proposal:\n\nDraft a concise technical overview (3-4 paragraphs) explaining the key differences, benefits, and architectural considerations of Microservices versus Monolithic software applications for a non-technical corporate stakeholder."
-      }
-    );
-  }
-
   const duration = testToUse.totalDurationMinutes || testToUse.durationMinutes || 60;
 
   return {
     data: {
       questions: flattenedQuestions,
+      sections: sections.map(s => ({
+        sectionId: s.sectionId,
+        sectionName: s.sectionName,
+        questionType: s.questionType,
+        durationMinutes: s.durationMinutes,
+        marks: s.marks,
+        order: s.order,
+      })),
       testId: testToUse.testId || "TEST-360-DEFAULT",
       totalDurationMinutes: duration,
       title: testToUse.title || "Enterprise Technical & Written Evaluation",

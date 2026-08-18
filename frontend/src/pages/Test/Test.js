@@ -807,6 +807,26 @@ const Test = () => {
     return `${m}:${s}`;
   };
 
+  const sectionsList = React.useMemo(() => {
+    const list = [];
+    const map = new Map();
+    questions.forEach((q, idx) => {
+      const sId = q.sectionId || "default";
+      if (!map.has(sId)) {
+        const sec = {
+          sectionId: sId,
+          sectionName: q.sectionName || `Section ${list.length + 1}`,
+          startIndex: idx,
+          questions: [],
+        };
+        map.set(sId, sec);
+        list.push(sec);
+      }
+      map.get(sId).questions.push({ ...q, globalIndex: idx });
+    });
+    return list;
+  }, [questions]);
+
   // ── Loading / Error states ──
   if (loading) {
     return (
@@ -839,85 +859,78 @@ const Test = () => {
   const answeredCount = Object.keys(answers).length;
   const progressPercent = Math.round((answeredCount / (questions.length || 1)) * 100);
 
-  const mcqQuestions = questions.filter(q => q.questionType === "MCQ");
-  const codingQuestions = questions.filter(q => q.questionType === "CODING");
-  const descriptiveQuestions = questions.filter(q => q.questionType === "DESCRIPTIVE");
+  const currentSection = sectionsList.find(s => s.sectionId === (currentQuestion?.sectionId || "default")) || sectionsList[0];
+  const currentSectionIndex = sectionsList.findIndex(s => s.sectionId === currentSection?.sectionId);
+  const nextSection = currentSectionIndex >= 0 && currentSectionIndex < sectionsList.length - 1 ? sectionsList[currentSectionIndex + 1] : null;
+  const questionIndexInSection = currentSection?.questions.findIndex(q => q.questionId === currentQuestion?.questionId) ?? 0;
 
-  const mcqCount = mcqQuestions.length;
-  const codingCount = codingQuestions.length;
-  const descriptiveCount = descriptiveQuestions.length;
-
-  const codingStartIndex = mcqCount;
-  const descriptiveStartIndex = mcqCount + codingCount;
-
-  const mcqAnsweredCount = mcqQuestions.filter(q => !!answers[q.questionId]).length;
-  const codingAnsweredCount = codingQuestions.filter(q => !!answers[q.questionId]).length;
-  const descriptiveAnsweredCount = descriptiveQuestions.filter(q => !!answers[q.questionId]).length;
-
-  const mcqProgressPercent = Math.round((mcqAnsweredCount / (mcqCount || 1)) * 100);
-
-  const isMcq = currentQuestion?.questionType === "MCQ";
   const isCoding = currentQuestion?.questionType === "CODING";
   const isDescriptive = currentQuestion?.questionType === "DESCRIPTIVE";
 
-  const renderPalette = () => (
-    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between overflow-hidden">
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
-          <span className="text-xs font-bold text-blue-700">{mcqAnsweredCount}/{mcqQuestions.length} Answered</span>
+  const renderPalette = () => {
+    const secQuestions = currentSection?.questions || questions.map((q, i) => ({ ...q, globalIndex: i }));
+    const secAnsweredCount = secQuestions.filter(q => !!answers[q.questionId]).length;
+    const secProgressPercent = Math.round((secAnsweredCount / (secQuestions.length || 1)) * 100);
+
+    return (
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between overflow-hidden">
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{currentSection?.sectionName || "Question"} Palette</h3>
+            <span className="text-xs font-bold text-blue-700">{secAnsweredCount}/{secQuestions.length} Answered</span>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4 overflow-hidden border border-slate-200">
+            <div
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${secProgressPercent}%` }}
+            ></div>
+          </div>
+
+          {/* Question Buttons Grid - Compact 5-column grid */}
+          <div className="grid grid-cols-5 gap-2.5 my-2 max-w-sm">
+            {secQuestions.map((q, index) => {
+              const isCurrent = currentIndex === q.globalIndex;
+              const isAnswered = !!answers[q.questionId];
+
+              return (
+                <button
+                  key={q.questionId}
+                  onClick={() => handlePaletteClick(q.globalIndex)}
+                  className={`h-9 sm:h-10 rounded-lg font-bold text-xs sm:text-sm transition duration-150 cursor-pointer flex items-center justify-center ${
+                    isCurrent
+                      ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105"
+                      : isAnswered
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4 overflow-hidden border border-slate-200">
-          <div
-            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-            style={{ width: `${mcqProgressPercent}%` }}
-          ></div>
-        </div>
-
-        {/* Question Buttons Grid - Compact 5-column grid */}
-        <div className="grid grid-cols-5 gap-2.5 my-2 max-w-sm">
-          {mcqQuestions.map((q, index) => {
-            const isCurrent = currentIndex === index;
-            const isAnswered = !!answers[q.questionId];
-
-            return (
-              <button
-                key={q.questionId}
-                onClick={() => handlePaletteClick(index)}
-                className={`h-9 sm:h-10 rounded-lg font-bold text-xs sm:text-sm transition duration-150 cursor-pointer flex items-center justify-center ${
-                  isCurrent
-                    ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105"
-                    : isAnswered
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
-                }`}
-              >
-                {index + 1}
-              </button>
-            );
-          })}
+        {/* Status Legend */}
+        <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] sm:text-xs text-slate-600 font-semibold shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded bg-emerald-600"></div>
+            <span>Answered</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded bg-blue-600"></div>
+            <span>Current</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></div>
+            <span>Unanswered</span>
+          </div>
         </div>
       </div>
-
-      {/* Status Legend */}
-      <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] sm:text-xs text-slate-600 font-semibold shrink-0">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-emerald-600"></div>
-          <span>Answered</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-blue-600"></div>
-          <span>Current</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></div>
-          <span>Unanswered</span>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
 
 
@@ -1006,46 +1019,24 @@ const Test = () => {
           <div className="flex items-center gap-6">
             <IdpLogo showTagline={false} />
 
-            {/* Section Tabs - Lowered down */}
-            <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1.5 mt-2 sm:mt-2.5 border border-slate-200">
-              <button
-                onClick={() => setCurrentIndex(0)}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  isMcq
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Section A: Aptitude
-              </button>
-              <button
-                onClick={() => {
-                  if (codingCount > 0) {
-                    setCurrentIndex(codingStartIndex);
-                  }
-                }}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  isCoding
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Section B: Coding
-              </button>
-              <button
-                onClick={() => {
-                  if (descriptiveCount > 0) {
-                    setCurrentIndex(descriptiveStartIndex);
-                  }
-                }}
-                className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  isDescriptive
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Section C: Descriptive
-              </button>
+            {/* Section Tabs - Dynamically rendered based on sectionsList */}
+            <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1.5 mt-2 sm:mt-2.5 border border-slate-200 overflow-x-auto max-w-xl">
+              {sectionsList.map((sec, sIdx) => {
+                const isActive = currentSection?.sectionId === sec.sectionId;
+                return (
+                  <button
+                    key={sec.sectionId}
+                    onClick={() => setCurrentIndex(sec.startIndex)}
+                    className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      isActive
+                        ? "bg-white text-blue-700 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {sec.sectionName || `Section ${sIdx + 1}`}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1099,24 +1090,23 @@ const Test = () => {
             <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
               <div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-                  Section B: Coding Round
+                  Section: {currentQuestion?.sectionName || "Coding"}
                 </span>
                 <h2 className="text-base font-bold text-slate-900 mt-1">
-                  Coding Question {currentIndex - codingStartIndex + 1} of {codingCount}
+                  Question {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
                 </h2>
               </div>
 
               {/* Inline Palette tabs */}
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Questions:</span>
-                {codingQuestions.map((q, index) => {
-                  const globalIndex = codingStartIndex + index;
-                  const isCurrent = currentIndex === globalIndex;
+                {currentSection?.questions?.map((q, index) => {
+                  const isCurrent = currentIndex === q.globalIndex;
                   const isAnswered = !!answers[q.questionId];
                   return (
                     <button
                       key={q.questionId}
-                      onClick={() => setCurrentIndex(globalIndex)}
+                      onClick={() => setCurrentIndex(q.globalIndex)}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
                         isCurrent
                           ? "bg-blue-600 text-white shadow-xs"
@@ -1310,24 +1300,20 @@ const Test = () => {
               </button>
 
               <div className="flex items-center gap-3">
-                {currentIndex === (codingStartIndex + codingCount - 1) ? (
+                {currentIndex === questions.length - 1 ? (
                   <button
-                    onClick={() => {
-                      if (descriptiveCount > 0) {
-                        setCurrentIndex(descriptiveStartIndex);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                    onClick={handleSubmit}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
                   >
-                    <span>Proceed to Descriptive Section</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <FileCheck2 className="w-4 h-4" />
+                    <span>Review & Submit</span>
                   </button>
                 ) : (
                   <button
                     onClick={handleNext}
                     className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                   >
-                    <span>Next</span>
+                    <span>{nextSection && questionIndexInSection === (currentSection?.questions?.length - 1) ? `Proceed to ${nextSection.sectionName}` : "Next"}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
@@ -1341,24 +1327,23 @@ const Test = () => {
             <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
               <div>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
-                  Section C: Descriptive Round
+                  Section: {currentQuestion?.sectionName || "Descriptive"}
                 </span>
                 <h2 className="text-base font-bold text-slate-900 mt-1">
-                  Descriptive Task {currentIndex - descriptiveStartIndex + 1} of {descriptiveCount}
+                  Task {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
                 </h2>
               </div>
 
               {/* Inline Palette tabs */}
               <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
                 <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Tasks:</span>
-                {descriptiveQuestions.map((q, index) => {
-                  const globalIndex = descriptiveStartIndex + index;
-                  const isCurrent = currentIndex === globalIndex;
+                {currentSection?.questions?.map((q, index) => {
+                  const isCurrent = currentIndex === q.globalIndex;
                   const isAnswered = !!answers[q.questionId];
                   return (
                     <button
                       key={q.questionId}
-                      onClick={() => setCurrentIndex(globalIndex)}
+                      onClick={() => setCurrentIndex(q.globalIndex)}
                       className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
                         isCurrent
                           ? "bg-blue-600 text-white shadow-xs"
@@ -1514,9 +1499,9 @@ const Test = () => {
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
-                        Question {currentIndex + 1} of {mcqQuestions.length}
+                        Question {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
                       </span>
-                      <span className="text-xs text-slate-500 font-medium">Multiple Choice</span>
+                      <span className="text-xs text-slate-500 font-medium">{currentQuestion?.sectionName || "Multiple Choice"}</span>
                     </div>
                     {answers[currentQuestion?.questionId] && (
                       <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
@@ -1575,26 +1560,20 @@ const Test = () => {
                   </button>
 
                   <div className="flex items-center gap-3">
-                    {currentIndex === mcqQuestions.length - 1 ? (
+                    {currentIndex === questions.length - 1 ? (
                       <button
-                        onClick={() => {
-                          if (codingCount > 0) {
-                            setCurrentIndex(codingStartIndex);
-                          } else if (descriptiveCount > 0) {
-                            setCurrentIndex(descriptiveStartIndex);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+                        onClick={handleSubmit}
+                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
                       >
-                        <span>{codingCount > 0 ? "Proceed to Coding Section" : "Proceed to Descriptive Section"}</span>
-                        <ChevronRight className="w-4 h-4" />
+                        <FileCheck2 className="w-4 h-4" />
+                        <span>Review & Submit</span>
                       </button>
                     ) : (
                       <button
                         onClick={handleNext}
                         className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
                       >
-                        <span>Next</span>
+                        <span>{nextSection && questionIndexInSection === (currentSection?.questions?.length - 1) ? `Proceed to ${nextSection.sectionName}` : "Next"}</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     )}

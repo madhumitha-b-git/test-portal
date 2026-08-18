@@ -191,12 +191,12 @@ def submit_answers(
     table = get_answers_table()
 
     import requests
-    real_section_names = {}
+    real_section_map = {}
     try:
         res = requests.get(f"https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/{testId}", timeout=5)
         if res.status_code == 200:
             test_data = res.json()
-            real_section_names = {s.get("sectionId"): s.get("sectionName") for s in test_data.get("sections", [])}
+            real_section_map = {s.get("sectionId"): s for s in test_data.get("sections", [])}
     except Exception as e:
         print(f"Error fetching test details: {e}")
 
@@ -204,8 +204,12 @@ def submit_answers(
     for section in sections:
         sec_data = section.model_dump(exclude_none=True)
         sec_id = sec_data.get("sectionId", "")
-        if sec_id in real_section_names:
-            sec_data["sectionName"] = real_section_names[sec_id]
+        if sec_id in real_section_map:
+            real_sec = real_section_map[sec_id]
+            if real_sec.get("sectionName"):
+                sec_data["sectionName"] = real_sec["sectionName"]
+            if real_sec.get("questionType"):
+                sec_data["questionType"] = real_sec["questionType"]
         sections_data.append(sec_data)
 
     # Fetch existing record to maintain testId submissions dictionary
@@ -244,7 +248,8 @@ def submit_answers(
     for section in sections_data:
         sec_id = section.get("sectionId", "")
         sec_name = section.get("sectionName", "")
-        if "DESCRIPTIVE" in str(sec_id).upper() or "DESCRIPTIVE" in str(sec_name).upper():
+        q_type = str(section.get("questionType", "")).upper()
+        if "DESCRIPTIVE" in str(sec_id).upper() or "DESCRIPTIVE" in str(sec_name).upper() or q_type == "DESCRIPTIVE":
             sqs_res = publish_descriptive_section_event(
                 test_id=testId,
                 mail_id=mailId,
