@@ -100,6 +100,7 @@ export const fetchQuestions = async (linkId) => {
   const sections = testToUse.sections || [];
   
   sections.forEach((section) => {
+    let qs = section.questions || [];
     // Always shuffle questions within each section for candidate anti-cheating isolation
     qs = shuffleArray(qs);
     
