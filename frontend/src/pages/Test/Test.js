@@ -640,7 +640,19 @@ const Test = () => {
 
       if (isScreenshotKey) {
         e.preventDefault();
-        terminateSession("Screen capture attempt detected");
+        if (Date.now() - lastWarningTimeRef.current > 2000) {
+          lastWarningTimeRef.current = Date.now();
+          incrementWarning({ mailId: email, testId: testId }).then((res) => {
+            const newCount = res.data.warningCount;
+            setWarningCount(newCount);
+            localStorage.setItem("proctoringWarningCount", String(newCount));
+          }).catch(() => {});
+          setShowWarningOverlay(true);
+          clearTimeout(lockoutTimerRef.current);
+          lockoutTimerRef.current = setTimeout(() => {
+            setShowWarningOverlay(false);
+          }, WARNING_LOCKOUT_MS);
+        }
         return false;
       }
     };
