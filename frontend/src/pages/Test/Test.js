@@ -612,6 +612,28 @@ const Test = () => {
       }
     };
 
+    const blockScreenshot = (e) => {
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        return false;
+      }
+      // Windows Snipping Tool (Win + Shift + S)
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        return false;
+      }
+      // Mac Screenshot (Cmd + Shift + 3/4/5)
+      if (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key)) {
+        e.preventDefault();
+        return false;
+      }
+      // Windows Game Bar (Win + G)
+      if (e.metaKey && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        return false;
+      }
+    };
+
     const blockRightClick = (e) => {
       e.preventDefault();
       return false;
@@ -632,6 +654,8 @@ const Test = () => {
     document.addEventListener("keydown", blockCopyPasteAndZoom);
     document.addEventListener("wheel", blockWheelZoom, { passive: false });
     document.addEventListener("keydown", blockFunctionKeys);
+    document.addEventListener("keydown", blockScreenshot);
+    document.addEventListener("keyup", blockScreenshot);
     document.addEventListener("contextmenu", blockRightClick, true);
     document.addEventListener("cut", blockCut);
     document.addEventListener("paste", blockPaste);
@@ -644,6 +668,8 @@ const Test = () => {
       document.removeEventListener("keydown", blockCopyPasteAndZoom);
       document.removeEventListener("wheel", blockWheelZoom);
       document.removeEventListener("keydown", blockFunctionKeys);
+      document.removeEventListener("keydown", blockScreenshot);
+      document.removeEventListener("keyup", blockScreenshot);
       document.removeEventListener("contextmenu", blockRightClick, true);
       document.removeEventListener("cut", blockCut);
       document.removeEventListener("paste", blockPaste);
