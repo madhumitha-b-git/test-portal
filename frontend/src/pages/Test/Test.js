@@ -443,6 +443,10 @@ const Test = () => {
 
   // ── Strict Browser Back Navigation Lockout & Mouse Swipe Interception ──
   useEffect(() => {
+    // Prevent trackpad swipe back/forward specifically in the exam screen
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overscrollBehavior = "none";
+
     // Mark test session as active
     localStorage.setItem("testStarted", "true");
 
@@ -502,6 +506,8 @@ const Test = () => {
     window.addEventListener("keydown", blockKeyboardBackNav, true);
 
     return () => {
+      document.documentElement.style.overscrollBehavior = "auto";
+      document.body.style.overscrollBehavior = "auto";
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("mouseup", blockMouseBackForward, true);
       window.removeEventListener("mousedown", blockMouseBackForward, true);

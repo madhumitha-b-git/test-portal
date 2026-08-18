@@ -8,7 +8,6 @@
     background-color: #f8fafc;
     color: #0f172a;
     min-height: 100vh;
-    overscroll-behavior: none; /* Prevents trackpad swipe back/forward */
     user-select: none; /* Prevents text selection globally */
     -webkit-user-select: none;
   }
