@@ -139,6 +139,7 @@ const Test = () => {
   const [showWarningOverlay, setShowWarningOverlay] = useState(false);
   const [isTerminated, setIsTerminated] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
+  const [pendingTermination, setPendingTermination] = useState(null);
   const [needsFullscreen, setNeedsFullscreen] = useState(false);
   const [fullscreenCountdown, setFullscreenCountdown] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -201,7 +202,9 @@ const Test = () => {
           const lastPing = localStorage.getItem("lastPing");
           if (lastPing) {
             const timeAway = Date.now() - parseInt(lastPing, 10);
-            if (timeAway > 15000) {
+            if (timeAway > 10000) {
+              setPendingTermination("Left exam window for more than 10 seconds");
+            } else if (timeAway > 2000) {
               // Just mark as away so they get a warning when it mounts and focuses
               isAwayRef.current = true;
             }
@@ -367,6 +370,13 @@ const Test = () => {
       terminateSession("Maximum warning limit exceeded (10 warnings).");
     }
   }, [warningCount, isTerminated, terminateSession]);
+
+  // ── Enforce pending terminations (e.g. from tab close) ──
+  useEffect(() => {
+    if (pendingTermination && !isTerminated) {
+      terminateSession(pendingTermination);
+    }
+  }, [pendingTermination, isTerminated, terminateSession]);
 
   // ── Handle tab / window returning within 10s ──
   const handleReturnFromAway = useCallback(() => {
@@ -619,23 +629,18 @@ const Test = () => {
     };
 
     const blockScreenshot = (e) => {
-      if (e.key === "PrintScreen") {
-        e.preventDefault();
-        return false;
-      }
+      let isScreenshotKey = false;
+      if (e.key === "PrintScreen") isScreenshotKey = true;
       // Windows Snipping Tool (Win + Shift + S)
-      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        return false;
-      }
+      else if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "s") isScreenshotKey = true;
       // Mac Screenshot (Cmd + Shift + 3/4/5)
-      if (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key)) {
-        e.preventDefault();
-        return false;
-      }
+      else if (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key)) isScreenshotKey = true;
       // Windows Game Bar (Win + G)
-      if (e.metaKey && e.key.toLowerCase() === "g") {
+      else if (e.metaKey && e.key.toLowerCase() === "g") isScreenshotKey = true;
+
+      if (isScreenshotKey) {
         e.preventDefault();
+        terminateSession("Screen capture attempt detected");
         return false;
       }
     };
@@ -684,7 +689,7 @@ const Test = () => {
       document.removeEventListener("drop", blockDragAndDrop);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isTerminated]);
+  }, [isTerminated, terminateSession]);
 
   // ── Cleanup timers ──
   useEffect(() => {
