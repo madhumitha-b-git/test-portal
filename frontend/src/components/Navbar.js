@@ -12,27 +12,13 @@ const Navbar = ({ candidate, hideUser = false }) => {
         {/* Brand Logo & Test Title */}
         <div className="flex items-center gap-3">
           <IdpLogo />
-          {testTitle && (
-            <div className="hidden sm:flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold">
-              <span>{testTitle}</span>
-            </div>
-          )}
+
         </div>
 
         {/* Status Badges & Candidate Profile */}
         <div className="flex items-center gap-3 sm:gap-6">
           
-          {/* Security Badge */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>AI Proctoring Active</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          </div>
 
-          <div className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-slate-500">
-            <Lock className="w-3.5 h-3.5 text-slate-400" />
-            <span>256-bit SSL Encrypted</span>
-          </div>
 
           {/* Candidate Info */}
           {!hideUser && candidate?.name && (

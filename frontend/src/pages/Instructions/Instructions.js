@@ -60,7 +60,7 @@ const Instructions = () => {
                 <span>Assessment Guidelines</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                {localStorage.getItem("testTitle") ? `${localStorage.getItem("testTitle")} - Examination Instructions` : "Hire360 Examination Instructions"}
+                {localStorage.getItem("testTitle") ? `${localStorage.getItem("testTitle")} - Examination Instructions` : "IDP Hire360 Examination Instructions"}
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Read the following rules and instructions carefully before starting your test session.
@@ -155,7 +155,7 @@ const Instructions = () => {
                 className="w-4 h-4 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-xs text-slate-700 font-semibold">
-                I have read and agree to all rules, proctoring policies, and system guidelines for Hire360.
+                I have read and agree to all rules, proctoring policies, and system guidelines for IDP Hire360.
               </span>
             </label>
           </div>

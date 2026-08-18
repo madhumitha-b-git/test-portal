@@ -112,7 +112,7 @@ const ThankYou = () => {
 
           <p className="text-xs sm:text-sm text-slate-600 mb-6 max-w-md mx-auto">
             {!isTerminated
-              ? "Thank you for completing your assessment on Hire360. Your answers have been safely recorded."
+              ? "Thank you for completing your assessment on IDP Hire360. Your answers have been safely recorded."
               : terminationReason || "Your assessment session has been submitted."}
           </p>
 

@@ -41,7 +41,7 @@ describe("Instructions Component", () => {
     await screen.findByText(/30 Minutes/i);
 
     // Verify loading of static content
-    expect(screen.getByText(/Hire360 Examination Instructions/i)).toBeInTheDocument();
+    expect(screen.getByText(/IDP Hire360 Examination Instructions/i)).toBeInTheDocument();
     
     // Find the Begin Assessment button
     const startButton = screen.getByRole("button", { name: /Begin Assessment/i });

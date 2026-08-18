@@ -953,7 +953,7 @@ const Test = () => {
               {fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'Security Warning!' : 'Fullscreen Mode Required'}
             </h2>
             <p className="text-slate-600 text-xs mb-4">
-              Hire360 requires active Fullscreen mode to continue your assessment.
+              IDP Hire360 requires active Fullscreen mode to continue your assessment.
             </p>
 
             {fullscreenCountdown !== null && (
