@@ -26,29 +26,22 @@ def publish_test_submitted_event(
 
     sns_client = session.client("sns")
 
-    merged_sections = {}
-    for section in sections:
-        sec_id = section.get("sectionId")
-        if not sec_id:
-            # If sectionId is completely missing, give it a placeholder based on content
-            responses = section.get("responses", [])
-            sec_id = "CODING-SECTION" if (responses and "typedAnswer" in responses[0]) else "MCQ-SECTION"
-            
-        if sec_id not in merged_sections:
-            merged_sections[sec_id] = []
-        merged_sections[sec_id].extend(section.get("responses", []))
-        
     mapped_sections = []
-    for sec_id, responses in merged_sections.items():
-        section_name = "MCQ"
-        if "DESCRIPTIVE" in str(sec_id).upper():
-            section_name = "DESCRIPTIVE"
-        elif len(responses) > 0 and "typedAnswer" in responses[0]:
-            section_name = "CODING"
-            
+    for section in sections:
+        sec_id = section.get("sectionId", "")
+        sec_name = section.get("sectionName", "")
+        responses = section.get("responses", [])
+        
+        if not sec_name:
+            sec_name = "MCQ"
+            if "DESCRIPTIVE" in str(sec_id).upper():
+                sec_name = "DESCRIPTIVE"
+            elif len(responses) > 0 and "typedAnswer" in responses[0]:
+                sec_name = "CODING"
+                
         mapped_sections.append({
             "sectionId": sec_id,
-            "sectionName": section_name,
+            "sectionName": sec_name,
             "responses": responses
         })
 

@@ -29,8 +29,6 @@ const Test = () => {
   const [answers, setAnswers] = useState(() => JSON.parse(localStorage.getItem("answers") || "{}"));
   const [executionMap, setExecutionMap] = useState({});
   const [showOutputMap, setShowOutputMap] = useState({});
-  const [customInputMap, setCustomInputMap] = useState({});
-  const [activeConsoleTabMap, setActiveConsoleTabMap] = useState({});
 
   // Resizable Split Panel State for Coding Round
   const [splitWidth, setSplitWidth] = useState(42); // Left panel width % (20% to 75%)
@@ -71,10 +69,7 @@ const Test = () => {
   const handleRunCode = async (questionId) => {
     if (!questionId) return;
     setShowOutputMap((prev) => ({ ...prev, [questionId]: true }));
-    setActiveConsoleTabMap((prev) => ({ ...prev, [questionId]: "output" }));
     const code = answers[questionId] || "";
-    const customInput = customInputMap[questionId] || "";
-
     if (!code.trim()) {
       setExecutionMap((prev) => ({
         ...prev,
@@ -97,7 +92,7 @@ const Test = () => {
     }));
 
     try {
-      const res = await runPythonCode(code, customInput);
+      const res = await runPythonCode(code);
       const outputText = typeof res?.output === "object"
         ? JSON.stringify(res.output, null, 2)
         : String(res?.output ?? "");
@@ -307,6 +302,7 @@ const Test = () => {
       if (!sectionsMap[sId]) {
         sectionsMap[sId] = {
           sectionId: sId,
+          sectionName: q.questionType === "DESCRIPTIVE" ? "DESCRIPTIVE" : (q.questionType === "CODING" ? "CODING" : "MCQ"),
           responses: []
         };
       }
@@ -333,8 +329,6 @@ const Test = () => {
 
     submitProctoringReport({
       mailId: mailId,
-      testId: testId,
-      linkId: localStorage.getItem("linkId") || "",
       startedTime: startedTime,
       endedTime: endedTime,
       status: "TERMINATED",
@@ -598,13 +592,8 @@ const Test = () => {
           e.preventDefault();
           return false;
         }
-        // Block copy, paste, cut, select all, view source, print, save, find, refresh
-        if (["c", "v", "x", "a", "u", "p", "s", "f", "r"].includes(key)) {
-          e.preventDefault();
-          return false;
-        }
-        // Block developer tools (Ctrl+Shift+I/J/C)
-        if (e.shiftKey && ["i", "j", "c"].includes(key)) {
+        // Block copy, paste, cut, select all, view source
+        if (["c", "v", "x", "a", "u"].includes(key)) {
           e.preventDefault();
           return false;
         }
@@ -665,41 +654,23 @@ const Test = () => {
     const blockCut = (e) => e.preventDefault();
     const blockPaste = (e) => e.preventDefault();
     const blockCopy = (e) => e.preventDefault();
-    const blockDragAndDrop = (e) => {
-      e.preventDefault();
-      return false;
-    };
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "Are you sure you want to leave? Your exam progress might be affected.";
-    };
 
     document.addEventListener("keydown", blockCopyPasteAndZoom);
     document.addEventListener("wheel", blockWheelZoom, { passive: false });
     document.addEventListener("keydown", blockFunctionKeys);
-    document.addEventListener("keydown", blockScreenshot);
-    document.addEventListener("keyup", blockScreenshot);
-    document.addEventListener("contextmenu", blockRightClick, true);
+    document.addEventListener("contextmenu", blockRightClick);
     document.addEventListener("cut", blockCut);
     document.addEventListener("paste", blockPaste);
     document.addEventListener("copy", blockCopy);
-    document.addEventListener("dragstart", blockDragAndDrop);
-    document.addEventListener("drop", blockDragAndDrop);
-    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       document.removeEventListener("keydown", blockCopyPasteAndZoom);
       document.removeEventListener("wheel", blockWheelZoom);
       document.removeEventListener("keydown", blockFunctionKeys);
-      document.removeEventListener("keydown", blockScreenshot);
-      document.removeEventListener("keyup", blockScreenshot);
-      document.removeEventListener("contextmenu", blockRightClick, true);
+      document.removeEventListener("contextmenu", blockRightClick);
       document.removeEventListener("cut", blockCut);
       document.removeEventListener("paste", blockPaste);
       document.removeEventListener("copy", blockCopy);
-      document.removeEventListener("dragstart", blockDragAndDrop);
-      document.removeEventListener("drop", blockDragAndDrop);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isTerminated, terminateSession]);
 
@@ -730,6 +701,7 @@ const Test = () => {
         if (!sectionsMap[sId]) {
           sectionsMap[sId] = {
             sectionId: sId,
+            sectionName: q.questionType === "DESCRIPTIVE" ? "DESCRIPTIVE" : (q.questionType === "CODING" ? "CODING" : "MCQ"),
             responses: []
           };
         }
@@ -760,8 +732,6 @@ const Test = () => {
 
       submitProctoringReport({
         mailId: mailId,
-        testId: testId,
-        linkId: localStorage.getItem("linkId") || "",
         startedTime: startedTime,
         endedTime: endedTime,
         status: "SUCCESS",
@@ -1239,41 +1209,17 @@ const Test = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: true }));
-                        setActiveConsoleTabMap((prev) => ({
-                          ...prev,
-                          [currentQuestion?.questionId]: prev[currentQuestion?.questionId] === "input" ? "output" : "input"
-                        }));
-                      }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold transition cursor-pointer ${
-                        showOutputMap[currentQuestion?.questionId] && activeConsoleTabMap[currentQuestion?.questionId] === "input"
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : "bg-slate-800 hover:bg-slate-700 text-slate-300"
-                      }`}
-                      title="Provide custom input for input() in your Python code"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Custom Input</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: !prev[currentQuestion?.questionId] }));
-                        setActiveConsoleTabMap((prev) => ({ ...prev, [currentQuestion?.questionId]: "output" }));
-                      }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold transition cursor-pointer ${
-                        showOutputMap[currentQuestion?.questionId] && (activeConsoleTabMap[currentQuestion?.questionId] || "output") === "output"
-                          ? "bg-slate-700 text-white"
-                          : "bg-slate-800 hover:bg-slate-700 text-slate-300"
-                      }`}
-                      title={showOutputMap[currentQuestion?.questionId] ? "Collapse console panel" : "Expand console panel"}
-                    >
-                      <Terminal className="w-3.5 h-3.5" />
-                      <span>{showOutputMap[currentQuestion?.questionId] ? "Console" : "Show Console"}</span>
-                      {showOutputMap[currentQuestion?.questionId] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                    </button>
+                    {executionMap[currentQuestion?.questionId] && (
+                      <button
+                        onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: !prev[currentQuestion?.questionId] }))}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                        title={showOutputMap[currentQuestion?.questionId] ? "Collapse output panel" : "Expand output panel"}
+                      >
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>{showOutputMap[currentQuestion?.questionId] ? "Hide Output" : "Show Output"}</span>
+                        {showOutputMap[currentQuestion?.questionId] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleRunCode(currentQuestion?.questionId)}
@@ -1299,59 +1245,33 @@ const Test = () => {
                   </div>
                 </div>
 
-                {/* Console Panel (Output & Custom Input STDIN) */}
+                {/* Output Panel */}
                 {showOutputMap[currentQuestion?.questionId] && (
-                  <div className="bg-slate-950 border-t border-slate-850 p-3 flex flex-col h-[150px] shrink-0 font-mono text-xs">
-                    {/* Console Header Tabs */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-2 shrink-0">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setActiveConsoleTabMap((prev) => ({ ...prev, [currentQuestion?.questionId]: "output" }))}
-                          className={`flex items-center gap-1.5 text-xs font-bold font-sans transition cursor-pointer pb-0.5 border-b-2 ${
-                            (activeConsoleTabMap[currentQuestion?.questionId] || "output") === "output"
-                              ? "text-blue-400 border-blue-500"
-                              : "text-slate-500 border-transparent hover:text-slate-300"
-                          }`}
-                        >
-                          <Terminal className="w-3.5 h-3.5" />
-                          <span>Output</span>
-                          {executionMap[currentQuestion?.questionId]?.executionTimeMs > 0 && (
-                            <span className="text-[10px] text-slate-500 font-normal">
-                              ({executionMap[currentQuestion?.questionId]?.executionTimeMs}ms)
-                            </span>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => setActiveConsoleTabMap((prev) => ({ ...prev, [currentQuestion?.questionId]: "input" }))}
-                          className={`flex items-center gap-1.5 text-xs font-bold font-sans transition cursor-pointer pb-0.5 border-b-2 ${
-                            activeConsoleTabMap[currentQuestion?.questionId] === "input"
-                              ? "text-blue-400 border-blue-500"
-                              : "text-slate-500 border-transparent hover:text-slate-300"
-                          }`}
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Custom Input (STDIN)</span>
-                          {customInputMap[currentQuestion?.questionId] && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                          )}
-                        </button>
+                  <div className="bg-slate-950 border-t border-slate-850 p-3.5 flex flex-col h-[140px] shrink-0 font-mono text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-1.5 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Output</span>
+                        {executionMap[currentQuestion?.questionId]?.executionTimeMs > 0 && (
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            ({executionMap[currentQuestion?.questionId]?.executionTimeMs}ms)
+                          </span>
+                        )}
                       </div>
-
                       <div className="flex items-center gap-2">
                         {executionMap[currentQuestion?.questionId]?.status === "error" && (
-                          <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded font-sans">
+                          <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded">
                             Execution Error
                           </span>
                         )}
                         {executionMap[currentQuestion?.questionId]?.status === "success" && (
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded font-sans">
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">
                             Success
                           </span>
                         )}
                         <button
                           onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: false }))}
-                          title="Close Console Panel"
+                          title="Close / Hide Output Panel"
                           className="flex items-center gap-1 text-[11px] font-sans font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800 px-2 py-0.5 rounded transition cursor-pointer"
                         >
                           <ChevronDown className="w-3.5 h-3.5" />
@@ -1360,32 +1280,17 @@ const Test = () => {
                       </div>
                     </div>
 
-                    {/* Console Tab Content */}
+                    {/* Output Content Area */}
                     <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1">
-                      {(activeConsoleTabMap[currentQuestion?.questionId] || "output") === "output" ? (
-                        <>
-                          {executionMap[currentQuestion?.questionId]?.output ? (
-                            <pre className="text-slate-200 whitespace-pre-wrap font-mono">
-                              {executionMap[currentQuestion?.questionId]?.output}
-                            </pre>
-                          ) : (
-                            <p className="text-slate-500 italic font-sans text-xs">
-                              Click &quot;Run Code&quot; to execute your Python program and view results.
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <div className="flex flex-col h-full space-y-1">
-                          <p className="text-[11px] text-slate-400 font-sans mb-1">
-                            Enter custom test input passed to standard input <code className="text-blue-300">input()</code> line by line:
-                          </p>
-                          <textarea
-                            value={customInputMap[currentQuestion?.questionId] || ""}
-                            onChange={(e) => setCustomInputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: e.target.value }))}
-                            placeholder="Enter test inputs here (e.g. 10&#10;20)..."
-                            className="w-full flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-slate-200 text-xs font-mono outline-none focus:border-blue-500 resize-none"
-                          />
-                        </div>
+                      {executionMap[currentQuestion?.questionId]?.output && (
+                        <pre className="text-slate-200 whitespace-pre-wrap">
+                          {executionMap[currentQuestion?.questionId]?.output}
+                        </pre>
+                      )}
+                      {executionMap[currentQuestion?.questionId]?.error && (
+                        <pre className="text-red-400 whitespace-pre-wrap font-bold">
+                          {executionMap[currentQuestion?.questionId]?.error}
+                        </pre>
                       )}
                     </div>
                   </div>

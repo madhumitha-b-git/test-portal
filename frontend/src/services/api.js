@@ -3,6 +3,7 @@ import axios from "axios";
 // Base URL of FastAPI backend
 const API = axios.create({
   baseURL: "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com",
+  //"",
   headers: {
     "Content-Type": "application/json",
   },

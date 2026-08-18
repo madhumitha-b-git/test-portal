@@ -12,20 +12,6 @@ const Instructions = () => {
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
 
   useEffect(() => {
-    // If test is already started or in progress, auto-redirect candidate back to test portal
-    const isTestStarted = localStorage.getItem("testStarted") === "true";
-    const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-
-    if (isSubmitted) {
-      navigate("/thankyou", { replace: true });
-      return;
-    }
-
-    if (isTestStarted) {
-      navigate("/test", { replace: true });
-      return;
-    }
-
     const loadTestDuration = async () => {
       try {
         const cachedDuration = localStorage.getItem("totalDurationMinutes");
@@ -48,12 +34,11 @@ const Instructions = () => {
       }
     };
     loadTestDuration();
-  }, [navigate]);
+  }, []);
 
   const handleStartTest = () => {
     if (!accepted) return;
-    localStorage.setItem("testStarted", "true");
-    navigate("/test", { replace: true });
+    navigate("/test");
   };
 
   return (

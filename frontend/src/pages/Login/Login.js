@@ -28,12 +28,9 @@ const Login = () => {
   const navigate = useNavigate();
   const { linkId: paramLinkId } = useParams();
   
-  // Extract linkId from URL params, query string (?linkId=208035), or pathname fallback (e.g. /208035)
-  const urlParams = new URLSearchParams(window.location.search);
-  const queryLinkId = urlParams.get("linkId");
+  // Extract linkId from params or directly from pathname fallback (e.g. /846764)
   const pathnameSegment = window.location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const pathLinkId = pathnameSegment && !["index.html", "instructions", "test", "review", "thankyou"].includes(pathnameSegment) ? pathnameSegment : "";
-  const linkId = paramLinkId || queryLinkId || pathLinkId || "";
+  const linkId = paramLinkId || (pathnameSegment && pathnameSegment !== "index.html" ? pathnameSegment : "");
 
   // Link validation state
   const [validatingLink, setValidatingLink] = useState(true);
@@ -76,31 +73,6 @@ const Login = () => {
 
   // Validate Link on mount or when linkId changes
   useEffect(() => {
-    // Detect if candidate is opening a new/different linkId than what is cached in localStorage
-    const cachedLinkId = localStorage.getItem("linkId");
-    if (linkId && cachedLinkId && String(linkId).trim() !== String(cachedLinkId).trim()) {
-      localStorage.removeItem("testStarted");
-      localStorage.removeItem("testSubmitted");
-      localStorage.removeItem("submittedTestId");
-      localStorage.removeItem("testTerminated");
-      localStorage.removeItem("terminationReason");
-      localStorage.removeItem("questions");
-      localStorage.removeItem("answers");
-      localStorage.removeItem("currentIndex");
-      localStorage.removeItem("proctoringStartedTime");
-      localStorage.removeItem("proctoringWarningCount");
-      localStorage.removeItem("proctoringStatus");
-      localStorage.removeItem("lastPing");
-    }
-
-    // If candidate has an active test session in progress for THIS test, auto-redirect immediately back to test
-    const isStarted = localStorage.getItem("testStarted") === "true";
-    const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-    if (isStarted && !isSubmitted) {
-      navigate("/test", { replace: true });
-      return;
-    }
-
     const validateLink = async () => {
       setValidatingLink(true);
       setLinkError(null);
@@ -138,7 +110,6 @@ const Login = () => {
       // If candidate is switching to a different testId, clear old test session state
       const currentStoredTestId = localStorage.getItem("testId");
       if (currentStoredTestId && currentStoredTestId !== test.testId) {
-        localStorage.removeItem("testStarted");
         localStorage.removeItem("testSubmitted");
         localStorage.removeItem("submittedTestId");
         localStorage.removeItem("testTerminated");
@@ -162,8 +133,9 @@ const Login = () => {
       setValidatingLink(false);
     };
 
+
     validateLink();
-  }, [linkId, navigate]);
+  }, [linkId]);
 
   // Handle register inputs (password/confirmPassword are 4-digit PINs)
   const handleRegChange = (e) => {
@@ -386,23 +358,18 @@ const Login = () => {
       try {
         const sessionsRes = await fetchProctoringSessions();
         const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
-        const activeTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
-        const activeLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
-
+        const currentTestId = String(testInfo.testId || localStorage.getItem("testId") || "").trim();
+        const currentLinkId = String(linkId || localStorage.getItem("linkId") || "").trim();
         const mySessions = sessions.filter((s) => {
           const matchEmail = (s.mailId || s.email || "").trim().toLowerCase() === normalizedMail;
           const sTest = String(s.testId || "").trim();
           const sLink = String(s.linkId || "").trim();
-
-          // Strictly match NON-EMPTY testId or linkId ONLY for this specific assessment
-          let matchTest = false;
-          if (activeTestId && ((sTest && sTest === activeTestId) || (sLink && sLink === activeTestId))) {
-            matchTest = true;
-          }
-          if (activeLinkId && ((sTest && sTest === activeLinkId) || (sLink && sLink === activeLinkId))) {
-            matchTest = true;
-          }
-
+          const matchTest = (sTest || sLink) ? (
+            (currentTestId && sTest === currentTestId) ||
+            (currentLinkId && sTest === currentLinkId) ||
+            (currentLinkId && sLink === currentLinkId) ||
+            (currentTestId && sLink === currentTestId)
+          ) : true;
           return matchEmail && matchTest;
         });
 
@@ -496,7 +463,7 @@ const Login = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 my-6">
         
         {/* ========================================================================= */}
         {/* 1. LOADING STATE */}
@@ -705,7 +672,7 @@ const Login = () => {
 
                 {/* TAB 1: REGISTRATION FORM */}
                 {activeTab === "register" && (
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
                     
                     {/* Full Name */}
                     <div>

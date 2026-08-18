@@ -12,7 +12,7 @@ def execute_code(request: ExecuteRequest):
     Does NOT store any data or modify candidate answers/DynamoDB.
     """
     try:
-        res = run_python_code_execution(request.code, request.input)
+        res = run_python_code_execution(request.code)
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

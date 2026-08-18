@@ -14,28 +14,17 @@ function LoginGuard({ children }) {
   const currentLinkId = queryLinkId || pathLinkId;
   const cachedLinkId = localStorage.getItem("linkId");
 
-  // If candidate is opening a NEW linkId, clear old test state and bypass redirect guards
+  // If candidate is opening a NEW linkId, bypass old test redirect guards
   if (currentLinkId && cachedLinkId && String(currentLinkId).trim() !== String(cachedLinkId).trim()) {
-    localStorage.removeItem("testStarted");
-    localStorage.removeItem("testSubmitted");
-    localStorage.removeItem("submittedTestId");
-    localStorage.removeItem("testTerminated");
-    localStorage.removeItem("terminationReason");
-    localStorage.removeItem("questions");
-    localStorage.removeItem("answers");
     return children;
   }
 
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-  const isStarted = localStorage.getItem("testStarted") === "true";
   const submittedTestId = localStorage.getItem("submittedTestId");
   const currentTestId = localStorage.getItem("testId");
 
   if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
-  }
-  if (isStarted && !isSubmitted) {
-    return <Navigate to="/test" replace />;
   }
   return children;
 }
@@ -43,7 +32,6 @@ function LoginGuard({ children }) {
 function InstructionsGuard({ children }) {
   const candidate = localStorage.getItem("candidate");
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
-  const isStarted = localStorage.getItem("testStarted") === "true";
   const submittedTestId = localStorage.getItem("submittedTestId");
   const currentTestId = localStorage.getItem("testId");
 
@@ -52,9 +40,6 @@ function InstructionsGuard({ children }) {
   }
   if (isSubmitted && (!submittedTestId || !currentTestId || String(submittedTestId) === String(currentTestId))) {
     return <Navigate to="/thankyou" replace />;
-  }
-  if (isStarted && !isSubmitted) {
-    return <Navigate to="/test" replace />;
   }
   return children;
 }

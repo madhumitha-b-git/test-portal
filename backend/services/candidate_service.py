@@ -11,6 +11,7 @@ from database.dynamodb import (
 )
 
 from services.sns_service import publish_test_submitted_event
+from services.sqs_service import publish_descriptive_section_event
 
 
 def hash_password(password: str) -> str:
@@ -152,12 +153,14 @@ def login_candidate(
     ans_rec = answers_table.get_item(Key={"mailId": user_mail_id}).get("Item", {})
     if ans_rec:
         submissions = ans_rec.get("submissions", {})
-        clean_test_id = (testId or "").strip()
-        if clean_test_id and clean_test_id in submissions:
-            sub = submissions[clean_test_id]
+        if testId and testId in submissions:
+            sub = submissions[testId]
             if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
                 is_submitted = True
-        elif clean_test_id and ans_rec.get("testId") == clean_test_id:
+        elif testId and ans_rec.get("testId") == testId:
+            if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                is_submitted = True
+        elif not testId:
             if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
                 is_submitted = True
 
@@ -187,10 +190,23 @@ def submit_answers(
     mailId = mailId.strip().lower()
     table = get_answers_table()
 
-    sections_data = [
-        section.model_dump(exclude_none=True)
-        for section in sections
-    ]
+    import requests
+    real_section_names = {}
+    try:
+        res = requests.get(f"https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/{testId}", timeout=5)
+        if res.status_code == 200:
+            test_data = res.json()
+            real_section_names = {s.get("sectionId"): s.get("sectionName") for s in test_data.get("sections", [])}
+    except Exception as e:
+        print(f"Error fetching test details: {e}")
+
+    sections_data = []
+    for section in sections:
+        sec_data = section.model_dump(exclude_none=True)
+        sec_id = sec_data.get("sectionId", "")
+        if sec_id in real_section_names:
+            sec_data["sectionName"] = real_section_names[sec_id]
+        sections_data.append(sec_data)
 
     # Fetch existing record to maintain testId submissions dictionary
     existing_rec = table.get_item(Key={"mailId": mailId}).get("Item", {})
@@ -224,10 +240,26 @@ def submit_answers(
         submitted_at=submittedAt,
     )
 
+    sqs_message_id = None
+    for section in sections_data:
+        sec_id = section.get("sectionId", "")
+        sec_name = section.get("sectionName", "")
+        if "DESCRIPTIVE" in str(sec_id).upper() or "DESCRIPTIVE" in str(sec_name).upper():
+            sqs_res = publish_descriptive_section_event(
+                test_id=testId,
+                mail_id=mailId,
+                descriptive_section=section,
+                submitted_at=submittedAt,
+            )
+            if sqs_res:
+                sqs_message_id = sqs_res.get("message_id")
+            break
+
     return {
         "success": True,
         "message": "Answers submitted successfully",
         "sns_message_id": sns_result["message_id"],
+        "sqs_message_id": sqs_message_id,
     }
 
 

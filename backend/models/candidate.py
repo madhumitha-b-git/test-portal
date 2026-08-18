@@ -95,6 +95,7 @@ class AnswerItem(BaseModel):
 class SectionResponses(BaseModel):
     """Group of answers for a section"""
     sectionId: str
+    sectionName: Optional[str] = None
     responses: List[AnswerItem]
 
 class SubmitRequest(BaseModel):

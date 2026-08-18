@@ -68,3 +68,14 @@ Thumbs.db
 *.tmp
 *.temp
 *.swp
+# Lambda deployment packages
+deployment-package.zip
+lambda-source.zip
+lambda-update.zip
+package/
+
+# Python specific additions
+*.sqlite3
+.coverage
+coverage.xml
+
