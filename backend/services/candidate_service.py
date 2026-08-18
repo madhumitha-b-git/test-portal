@@ -50,11 +50,12 @@ def register_candidate(
 ):
     """
     Stores candidate details in Users table with hashed password.
-    Scopes registrations per testId so candidate can attend multiple tests with same email.
+    Scopes registrations per testId so candidate can attend multiple tests with same email without error.
     """
 
     mailId = mailId.strip().lower()
     table = get_users_table()
+    clean_test_id = (testId or "").strip()
 
     existing_user = table.get_item(Key={"mailId": mailId})
     if "Item" not in existing_user:
@@ -70,29 +71,89 @@ def register_candidate(
         "college": college,
         "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    if testId:
-        reg_entry["testId"] = testId
+    if clean_test_id:
+        reg_entry["testId"] = clean_test_id
 
-    if "Item" in existing_user:
-        return {
-            "success": False,
-            "message": "Email already registered. You can log in using your 4-digit PIN."
-        }
+    # Check if THIS specific testId has already been submitted in the answers table
+    if clean_test_id:
+        try:
+            answers_table = get_answers_table()
+            ans_rec = answers_table.get_item(Key={"mailId": mailId}).get("Item", {})
+            if ans_rec:
+                submissions = ans_rec.get("submissions", {})
+                if clean_test_id in submissions:
+                    sub = submissions[clean_test_id]
+                    if sub.get("isSubmitted") or sub.get("status") in ["SUBMITTED", "submitted"]:
+                        return {
+                            "success": False,
+                            "message": "You have already completed/submitted this assessment."
+                        }
+                elif ans_rec.get("testId") == clean_test_id:
+                    if ans_rec.get("isSubmitted") or ans_rec.get("status") in ["SUBMITTED", "submitted"]:
+                        return {
+                            "success": False,
+                            "message": "You have already completed/submitted this assessment."
+                        }
+        except Exception as e:
+            print("Error checking answers table during registration:", e)
 
     hashed_pw = hash_password(password)
-    registrations = {testId: reg_entry} if testId else {}
 
-    table.put_item(
-        Item={
-            "mailId": mailId,
-            "name": name,
-            "mobile": mobile,
-            "college": college,
-            "password": hashed_pw,
-            "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "registrations": registrations,
-        }
-    )
+    if "Item" in existing_user:
+        user_item = existing_user["Item"]
+        registrations = user_item.get("registrations", {})
+        if not isinstance(registrations, dict):
+            registrations = {}
+
+        # If candidate already registered for THIS exact testId, show already registered message
+        if clean_test_id and clean_test_id in registrations:
+            return {
+                "success": False,
+                "message": "You are already registered for this assessment. Please log in using your 4-digit PIN."
+            }
+
+        if clean_test_id:
+            registrations[clean_test_id] = reg_entry
+
+        # Update candidate profile and append new testId registration
+        try:
+            table.update_item(
+                Key={"mailId": user_item.get("mailId", mailId)},
+                UpdateExpression="SET #n = :n, mobile = :m, college = :c, #p = :p, registrations = :r",
+                ExpressionAttributeNames={"#n": "name", "#p": "password"},
+                ExpressionAttributeValues={
+                    ":n": name,
+                    ":m": mobile,
+                    ":c": college,
+                    ":p": hashed_pw,
+                    ":r": registrations,
+                }
+            )
+        except Exception:
+            table.put_item(
+                Item={
+                    "mailId": mailId,
+                    "name": name,
+                    "mobile": mobile,
+                    "college": college,
+                    "password": hashed_pw,
+                    "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "registrations": registrations,
+                }
+            )
+    else:
+        registrations = {clean_test_id: reg_entry} if clean_test_id else {}
+        table.put_item(
+            Item={
+                "mailId": mailId,
+                "name": name,
+                "mobile": mobile,
+                "college": college,
+                "password": hashed_pw,
+                "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "registrations": registrations,
+            }
+        )
 
     return {
         "success": True,

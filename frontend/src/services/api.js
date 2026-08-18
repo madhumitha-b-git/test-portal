@@ -100,14 +100,13 @@ export const fetchQuestions = async (linkId) => {
   const sections = testToUse.sections || [];
   
   sections.forEach((section) => {
-    let qs = section.questions || [];
-    if (section.shuffleQuestions) {
-      qs = shuffleArray(qs);
-    }
+    // Always shuffle questions within each section for candidate anti-cheating isolation
+    qs = shuffleArray(qs);
     
     qs.forEach((q) => {
       let options = q.options || [];
-      if (section.shuffleOptions && Array.isArray(options)) {
+      // Always shuffle MCQ options for candidate anti-cheating isolation
+      if (Array.isArray(options) && options.length > 0) {
         options = shuffleArray(options);
       }
 

@@ -173,6 +173,7 @@ const Test = () => {
       try {
         let duration = parseInt(localStorage.getItem("totalDurationMinutes") || "60", 10);
         let currentTestId = testId;
+        localStorage.removeItem("lastPing");
 
         // Fetch questions if not cached
         const cachedQuestions = localStorage.getItem("questions");
