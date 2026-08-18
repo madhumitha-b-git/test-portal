@@ -876,7 +876,7 @@ const Test = () => {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between overflow-hidden">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{currentSection?.sectionName || "Question"} Palette</h3>
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
             <span className="text-xs font-bold text-blue-700">{secAnsweredCount}/{secQuestions.length} Answered</span>
           </div>
 
@@ -1011,36 +1011,14 @@ const Test = () => {
         </div>
       )}
 
-      {/* Top Header Bar - Section tabs positioned 2 inches down with comfortable spacing */}
+      {/* Top Header Bar */}
       <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 pt-3.5 pb-3 shrink-0 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           
-          {/* Left: Logo & Section Navigation Tabs (positioned lower down for easy access) */}
+          {/* Left: Logo */}
           <div className="flex items-center gap-6">
             <IdpLogo showTagline={false} />
-
-            {/* Section Tabs - Dynamically rendered based on sectionsList */}
-            <div className="hidden md:flex bg-slate-100 p-1 rounded-lg gap-1.5 mt-2 sm:mt-2.5 border border-slate-200 overflow-x-auto max-w-xl">
-              {sectionsList.map((sec, sIdx) => {
-                const isActive = currentSection?.sectionId === sec.sectionId;
-                return (
-                  <button
-                    key={sec.sectionId}
-                    onClick={() => setCurrentIndex(sec.startIndex)}
-                    className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      isActive
-                        ? "bg-white text-blue-700 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    {sec.sectionName || `Section ${sIdx + 1}`}
-                  </button>
-                );
-              })}
-            </div>
           </div>
-
-
 
           {/* Real-Time Metrics Header */}
           <div className="flex items-center gap-3 sm:gap-6">
@@ -1082,6 +1060,34 @@ const Test = () => {
 
       {/* Main Examination View - Full Viewport Zero Scroll Fit */}
       <main className="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+
+        {/* Section Navigation Tabs Bar - Positioned lower down in the assessment view away from top browser edge */}
+        <div className="flex items-center justify-start pb-3 shrink-0">
+          <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 gap-1.5 max-w-full overflow-x-auto">
+            {sectionsList.map((sec, sIdx) => {
+              const isActive = currentSection?.sectionId === sec.sectionId;
+              const rawName = (sec.sectionName || "").toUpperCase();
+              let displayName = sec.sectionName || `Section ${sIdx + 1}`;
+              if (rawName === "MCQ" || rawName === "APTITUDE") displayName = "Section A: Aptitude";
+              else if (rawName === "CODING") displayName = "Section B: Coding";
+              else if (rawName === "DESCRIPTIVE") displayName = "Section C: Descriptive";
+
+              return (
+                <button
+                  key={sec.sectionId}
+                  onClick={() => setCurrentIndex(sec.startIndex)}
+                  className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? "bg-white text-blue-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {displayName}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {isCoding ? (
           <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
@@ -1501,7 +1507,7 @@ const Test = () => {
                       <span className="px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
                         Question {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
                       </span>
-                      <span className="text-xs text-slate-500 font-medium">{currentQuestion?.sectionName || "Multiple Choice"}</span>
+                      <span className="text-xs text-slate-500 font-medium">Multiple Choice</span>
                     </div>
                     {answers[currentQuestion?.questionId] && (
                       <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
