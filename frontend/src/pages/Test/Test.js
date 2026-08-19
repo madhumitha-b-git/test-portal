@@ -2,9 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchQuestions, startProctoringSession, incrementWarning, submitAnswers, submitProctoringReport } from "../../services/api";
 import { runPythonCode } from "../../services/codeExecution";
-import IdpLogo from "../../components/IdpLogo";
-import PythonEditor from "../../components/PythonEditor";
-import { Clock, ShieldAlert, AlertTriangle, Maximize, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, AlertCircle, FileCheck2, User, Play, Terminal, Loader2, Trash2, Edit3, FileText } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+
+import TestHeader from "./components/TestHeader";
+import McqView from "./components/McqView";
+import CodingView from "./components/CodingView";
+import DescriptiveView from "./components/DescriptiveView";
+import ProctoringOverlay from "./components/ProctoringOverlay";
 
 const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
@@ -868,201 +872,48 @@ const Test = () => {
   const isCoding = currentQuestion?.questionType === "CODING";
   const isDescriptive = currentQuestion?.questionType === "DESCRIPTIVE";
 
-  const renderPalette = () => {
-    const secQuestions = currentSection?.questions || questions.map((q, i) => ({ ...q, globalIndex: i }));
-    const secAnsweredCount = secQuestions.filter(q => !!answers[q.questionId]).length;
-    const secProgressPercent = Math.round((secAnsweredCount / (secQuestions.length || 1)) * 100);
-
-    return (
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between overflow-hidden">
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Question Palette</h3>
-            <span className="text-xs font-bold text-blue-700">{secAnsweredCount}/{secQuestions.length} Answered</span>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mb-4 overflow-hidden border border-slate-200">
-            <div
-              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${secProgressPercent}%` }}
-            ></div>
-          </div>
-
-          {/* Question Buttons Grid - Compact 5-column grid */}
-          <div className="grid grid-cols-5 gap-2.5 my-2 max-w-sm">
-            {secQuestions.map((q, index) => {
-              const isCurrent = currentIndex === q.globalIndex;
-              const isAnswered = !!answers[q.questionId];
-
-              return (
-                <button
-                  key={q.questionId}
-                  onClick={() => handlePaletteClick(q.globalIndex)}
-                  className={`h-9 sm:h-10 rounded-lg font-bold text-xs sm:text-sm transition duration-150 cursor-pointer flex items-center justify-center ${
-                    isCurrent
-                      ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105"
-                      : isAnswered
-                      ? "bg-emerald-600 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Status Legend */}
-        <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] sm:text-xs text-slate-600 font-semibold shrink-0">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-emerald-600"></div>
-            <span>Answered</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-blue-600"></div>
-            <span>Current</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-slate-100 border border-slate-300"></div>
-            <span>Unanswered</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
-
-
-
   // ── Terminated screen ──
   if (isTerminated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-xl shadow-sm max-w-md w-full text-center border border-red-200">
-          <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-8 h-8 text-red-600" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Assessment Terminated</h1>
-          <p className="text-red-600 text-xs mb-3 font-medium">{terminationReason}</p>
-          <p className="text-slate-500 text-xs">Redirecting candidate session...</p>
-        </div>
-      </div>
+      <ProctoringOverlay
+        isTerminated={isTerminated}
+        terminationReason={terminationReason}
+      />
     );
   }
 
   return (
     <div className="bg-slate-50 text-slate-800 flex flex-col justify-between select-none relative h-screen max-h-screen overflow-hidden">
       
-      {/* ── Fullscreen Overlay ── */}
-      {needsFullscreen && !isDocumentFullscreen() && initialFullscreenDoneRef.current && !isTerminated && !showWarningOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-slate-200">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-blue-50 text-blue-600 border border-blue-200'}`}>
-              <Maximize className="w-7 h-7" />
-            </div>
-            <h2 className={`text-lg font-bold mb-2 ${fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'text-red-600' : 'text-slate-900'}`}>
-              {fullscreenCountdown !== null && fullscreenCountdown <= 5 ? 'Security Warning!' : 'Fullscreen Mode Required'}
-            </h2>
-            <p className="text-slate-600 text-xs mb-4">
-              IDP Hire360 requires active Fullscreen mode to continue your assessment.
-            </p>
-
-            {fullscreenCountdown !== null && (
-              <div className="mb-5 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
-                <div className={`text-3xl font-extrabold ${fullscreenCountdown <= 5 ? 'text-red-600' : 'text-slate-900'}`}>
-                  {fullscreenCountdown}s
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">
-                  Seconds remaining before termination
-                </p>
-              </div>
-            )}
-
-            <button
-              onClick={() => {
-                setNeedsFullscreen(false);
-                enterFullscreen();
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-semibold text-xs transition cursor-pointer"
-            >
-              Enter Fullscreen Mode
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Warning Overlay ── */}
-      {showWarningOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-amber-200">
-            <div className="w-14 h-14 bg-amber-50 border border-amber-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-7 h-7 text-amber-600" />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-2">Window Switch Detected!</h2>
-            <p className="text-slate-600 text-xs mb-4">
-              Exam interface locked for 5 seconds. Please stay on the assessment window.
-            </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-800 font-bold text-xs">
-              <span>Warning Record: {warningCount}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Fullscreen / Warning Overlays ── */}
+      <ProctoringOverlay
+        isTerminated={isTerminated}
+        terminationReason={terminationReason}
+        needsFullscreen={needsFullscreen}
+        isDocumentFullscreen={isDocumentFullscreen}
+        initialFullscreenDoneRef={initialFullscreenDoneRef}
+        showWarningOverlay={showWarningOverlay}
+        fullscreenCountdown={fullscreenCountdown}
+        warningCount={warningCount}
+        setNeedsFullscreen={setNeedsFullscreen}
+        enterFullscreen={enterFullscreen}
+      />
 
       {/* Top Header Bar */}
-      <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 pt-3.5 pb-3 shrink-0 shadow-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          
-          {/* Left: Logo */}
-          <div className="flex items-center gap-6">
-            <IdpLogo showTagline={false} />
-          </div>
-
-          {/* Real-Time Metrics Header */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            
-            {/* Proctoring Warning Badge */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${
-              warningCount > 0 
-                ? "bg-amber-50 border-amber-300 text-amber-800"
-                : "bg-slate-100 border-slate-200 text-slate-700"
-            }`}>
-              <ShieldAlert className={`w-4 h-4 ${warningCount > 0 ? "text-amber-600" : "text-emerald-600"}`} />
-              <span>Warnings: {warningCount}</span>
-            </div>
-
-            {/* Countdown Timer */}
-            <div className={`flex items-center gap-2 px-3.5 py-1 rounded-lg text-sm font-bold font-mono border ${
-              timeLeft !== null && timeLeft < 300 
-                ? "bg-red-50 border-red-300 text-red-600 animate-pulse" 
-                : timeLeft !== null && timeLeft < 600
-                ? "bg-amber-50 border-amber-300 text-amber-700"
-                : "bg-blue-50 border-blue-200 text-blue-800"
-            }`}>
-              <Clock className="w-4 h-4" />
-              <span>{formatTime(timeLeft)}</span>
-            </div>
-
-            {/* Candidate Name */}
-            {candidate.name && (
-              <div className="hidden md:flex items-center gap-2 text-xs text-slate-700 font-semibold pl-2 border-l border-slate-200">
-                <User className="w-3.5 h-3.5 text-blue-600" />
-                <span className="truncate max-w-[120px]">{candidate.name}</span>
-              </div>
-            )}
-
-          </div>
-
-        </div>
-      </header>
+      <TestHeader
+        candidate={candidate}
+        warningCount={warningCount}
+        timeLeft={timeLeft}
+        formatTime={formatTime}
+        sectionsList={sectionsList}
+        currentSection={currentSection}
+        setCurrentIndex={setCurrentIndex}
+      />
 
       {/* Main Examination View - Full Viewport Zero Scroll Fit */}
       <main className="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
 
-        {/* Section Navigation Tabs Bar - Positioned lower down in the assessment view away from top browser edge */}
+        {/* Section Navigation Tabs Bar */}
         <div className="flex items-center justify-start pb-3 shrink-0">
           <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 gap-1.5 max-w-full overflow-x-auto">
             {sectionsList.map((sec, sIdx) => {
@@ -1079,8 +930,8 @@ const Test = () => {
                   onClick={() => setCurrentIndex(sec.startIndex)}
                   className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     isActive
-                      ? "bg-white text-blue-700 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
+                      ? "bg-white text-blue-700 shadow-xs border border-slate-200"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                   }`}
                 >
                   {displayName}
@@ -1091,509 +942,62 @@ const Test = () => {
         </div>
 
         {isCoding ? (
-          <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
-            
-            {/* Section Header Card */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-                  Section: {currentQuestion?.sectionName || "Coding"}
-                </span>
-                <h2 className="text-base font-bold text-slate-900 mt-1">
-                  Question {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
-                </h2>
-              </div>
-
-              {/* Inline Palette tabs */}
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
-                <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Questions:</span>
-                {currentSection?.questions?.map((q, index) => {
-                  const isCurrent = currentIndex === q.globalIndex;
-                  const isAnswered = !!answers[q.questionId];
-                  return (
-                    <button
-                      key={q.questionId}
-                      onClick={() => setCurrentIndex(q.globalIndex)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
-                        isCurrent
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : isAnswered
-                          ? "bg-emerald-600 text-white"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      Q{index + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Side-by-side Resizable Layout */}
-            <div
-              ref={codingContainerRef}
-              className={`flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden ${
-                isDraggingSplit ? "select-none" : ""
-              }`}
-            >
-              {/* Left Column: Problem Description Card */}
-              <div
-                style={{ width: window.innerWidth >= 1024 ? `${splitWidth}%` : "100%" }}
-                className={`w-full bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
-                  isDraggingSplit ? "" : "transition-all duration-75"
-                }`}
-              >
-                <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
-                  <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Problem Statement</h3>
-                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
-                    {currentQuestion?.marks || 15} Marks
-                  </span>
-                </div>
-                <div className="flex-1 overflow-y-auto pr-1">
-                  <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
-                    {currentQuestion?.question || currentQuestion?.text}
-                  </p>
-                </div>
-              </div>
-
-              {/* Draggable Split Divider Bar (Desktop) */}
-              <div
-                onMouseDown={handleMouseDownSplit}
-                className="hidden lg:flex w-4 cursor-col-resize items-center justify-center bg-transparent hover:bg-blue-100/60 group transition-colors duration-150 relative z-10 shrink-0 mx-1 rounded-md"
-                title="Click and drag to adjust width between Problem Statement and Code Editor"
-              >
-                <div className="w-1.5 h-16 bg-slate-300 group-hover:bg-blue-600 rounded-full transition-colors flex flex-col justify-center items-center gap-1 shadow-xs">
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                </div>
-              </div>
-
-              {/* Right Column: Python IDE Card */}
-              <div
-                style={{ width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%" }}
-                className={`w-full flex-1 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 shadow-lg flex flex-col min-h-0 overflow-hidden ${
-                  isDraggingSplit ? "" : "transition-all duration-75"
-                }`}
-              >
-                {/* IDE Header */}
-                <div className="bg-slate-950 px-5 py-2.5 border-b border-slate-850 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-400 font-mono">Python 3</span>
-                  </div>
-                </div>
-                
-                {/* Python Monaco Editor area */}
-                <div className="flex-1 relative overflow-hidden min-h-0">
-                  <PythonEditor
-                    value={answers[currentQuestion.questionId] || ""}
-                    onChange={(val) => handleAnswer(currentQuestion.questionId, val)}
-                  />
-                </div>
-
-                {/* Footer status bar & Run Code Action */}
-                <div className="bg-slate-950 px-5 py-2 border-t border-slate-850 flex justify-between items-center text-[11px] text-slate-400 font-mono shrink-0">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span>Status: </span>
-                      <span className={answers[currentQuestion?.questionId] ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                        {answers[currentQuestion?.questionId] ? "Saved (Draft)" : "Unsaved"}
-                      </span>
-                    </div>
-                    <div>
-                      <span>Lines: {(answers[currentQuestion?.questionId] || "").split("\n").length}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {executionMap[currentQuestion?.questionId] && (
-                      <button
-                        onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: !prev[currentQuestion?.questionId] }))}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-sans text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
-                        title={showOutputMap[currentQuestion?.questionId] ? "Collapse output panel" : "Expand output panel"}
-                      >
-                        <Terminal className="w-3.5 h-3.5" />
-                        <span>{showOutputMap[currentQuestion?.questionId] ? "Hide Output" : "Show Output"}</span>
-                        {showOutputMap[currentQuestion?.questionId] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleRunCode(currentQuestion?.questionId)}
-                      disabled={executionMap[currentQuestion?.questionId]?.isRunning}
-                      className={`flex items-center gap-2 px-4 py-1.5 rounded-md font-sans text-xs font-bold transition cursor-pointer ${
-                        executionMap[currentQuestion?.questionId]?.isRunning
-                          ? "bg-slate-800 text-slate-400 cursor-not-allowed"
-                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                      }`}
-                    >
-                      {executionMap[currentQuestion?.questionId]?.isRunning ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Running...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                          <span>Run Code</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Output Panel */}
-                {showOutputMap[currentQuestion?.questionId] && (
-                  <div className="bg-slate-950 border-t border-slate-850 p-3.5 flex flex-col h-[140px] shrink-0 font-mono text-xs">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-850 mb-1.5 shrink-0">
-                      <div className="flex items-center gap-2">
-                        <Terminal className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Output</span>
-                        {executionMap[currentQuestion?.questionId]?.executionTimeMs > 0 && (
-                          <span className="text-[10px] text-slate-500 font-normal">
-                            ({executionMap[currentQuestion?.questionId]?.executionTimeMs}ms)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {executionMap[currentQuestion?.questionId]?.status === "error" && (
-                          <span className="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/50 px-2 py-0.5 rounded">
-                            Execution Error
-                          </span>
-                        )}
-                        {executionMap[currentQuestion?.questionId]?.status === "success" && (
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">
-                            Success
-                          </span>
-                        )}
-                        <button
-                          onClick={() => setShowOutputMap((prev) => ({ ...prev, [currentQuestion?.questionId]: false }))}
-                          title="Close / Hide Output Panel"
-                          className="flex items-center gap-1 text-[11px] font-sans font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800 px-2 py-0.5 rounded transition cursor-pointer"
-                        >
-                          <ChevronDown className="w-3.5 h-3.5" />
-                          <span>Close</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Output Content Area */}
-                    <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1">
-                      {executionMap[currentQuestion?.questionId]?.output && (
-                        <pre className="text-slate-200 whitespace-pre-wrap">
-                          {executionMap[currentQuestion?.questionId]?.output}
-                        </pre>
-                      )}
-                      {executionMap[currentQuestion?.questionId]?.error && (
-                        <pre className="text-red-400 whitespace-pre-wrap font-bold">
-                          {executionMap[currentQuestion?.questionId]?.error}
-                        </pre>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Coding Section Navigation Controls */}
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
-              <button
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Previous</span>
-              </button>
-
-              <div className="flex items-center gap-3">
-                {currentIndex === questions.length - 1 ? (
-                  <button
-                    onClick={handleSubmit}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
-                  >
-                    <FileCheck2 className="w-4 h-4" />
-                    <span>Review & Submit</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleNext}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
-                  >
-                    <span>{nextSection && questionIndexInSection === (currentSection?.questions?.length - 1) ? `Proceed to ${nextSection.sectionName}` : "Next"}</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          <CodingView
+            currentQuestion={currentQuestion}
+            questionIndexInSection={questionIndexInSection}
+            currentSection={currentSection}
+            currentIndex={currentIndex}
+            answers={answers}
+            setCurrentIndex={setCurrentIndex}
+            codingContainerRef={codingContainerRef}
+            isDraggingSplit={isDraggingSplit}
+            splitWidth={splitWidth}
+            handleMouseDownSplit={handleMouseDownSplit}
+            handleAnswer={handleAnswer}
+            executionMap={executionMap}
+            showOutputMap={showOutputMap}
+            setShowOutputMap={setShowOutputMap}
+            handleRunCode={handleRunCode}
+            handlePrevious={handlePrevious}
+            handleNext={handleNext}
+            handleSubmit={handleSubmit}
+            questions={questions}
+            nextSection={nextSection}
+          />
         ) : isDescriptive ? (
-          <div className="w-full flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
-            
-            {/* Section Header Card */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
-                  Section: {currentQuestion?.sectionName || "Descriptive"}
-                </span>
-                <h2 className="text-base font-bold text-slate-900 mt-1">
-                  Task {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
-                </h2>
-              </div>
-
-              {/* Inline Palette tabs */}
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shrink-0">
-                <span className="text-[10px] uppercase font-bold text-slate-500 px-2">Tasks:</span>
-                {currentSection?.questions?.map((q, index) => {
-                  const isCurrent = currentIndex === q.globalIndex;
-                  const isAnswered = !!answers[q.questionId];
-                  return (
-                    <button
-                      key={q.questionId}
-                      onClick={() => setCurrentIndex(q.globalIndex)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition duration-150 cursor-pointer ${
-                        isCurrent
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : isAnswered
-                          ? "bg-emerald-600 text-white"
-                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
-                      }`}
-                    >
-                      Task {index + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Side-by-side Resizable Layout */}
-            <div
-              ref={codingContainerRef}
-              className={`flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden ${
-                isDraggingSplit ? "select-none" : ""
-              }`}
-            >
-              {/* Left Column: Task Prompt & Scenario Card */}
-              <div
-                style={{ width: window.innerWidth >= 1024 ? `${splitWidth}%` : "100%" }}
-                className={`w-full bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
-                  isDraggingSplit ? "" : "transition-all duration-75"
-                }`}
-              >
-                <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-3 shrink-0">
-                  <h3 className="text-xs uppercase font-bold tracking-wider text-slate-500">Task Prompt & Scenario</h3>
-                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
-                    {currentQuestion?.marks || 10} Marks
-                  </span>
-                </div>
-                <div className="flex-1 overflow-y-auto pr-1">
-                  <p className="text-sm text-slate-800 leading-relaxed font-medium whitespace-pre-wrap">
-                    {currentQuestion?.question || currentQuestion?.text}
-                  </p>
-                </div>
-
-                {/* Guidelines Footer */}
-                <div className="mt-3 pt-2.5 border-t border-slate-100 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100 shrink-0">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-1">
-                    <FileText className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Notepad Guidelines</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-normal">
-                    Type your essay or written content in the notepad area. Your text is auto-saved in real-time as you write. Use the Clear button to start fresh.
-                  </p>
-                </div>
-              </div>
-
-              {/* Draggable Split Divider Bar (Desktop) */}
-              <div
-                onMouseDown={handleMouseDownSplit}
-                className="hidden lg:flex w-4 cursor-col-resize items-center justify-center bg-transparent hover:bg-blue-100/60 group transition-colors duration-150 relative z-10 shrink-0 mx-1 rounded-md"
-                title="Click and drag to adjust width between Task Prompt and Notepad Editor"
-              >
-                <div className="w-1.5 h-16 bg-slate-300 group-hover:bg-blue-600 rounded-full transition-colors flex flex-col justify-center items-center gap-1 shadow-xs">
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                  <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
-                </div>
-              </div>
-
-              {/* Right Column: Notepad Editor Card */}
-              <div
-                style={{ width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%" }}
-                className={`w-full flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden ${
-                  isDraggingSplit ? "" : "transition-all duration-75"
-                }`}
-              >
-                {/* Editor Header */}
-                <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Notepad Editor</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold text-slate-500">
-                      {(answers[currentQuestion?.questionId] || "").trim() ? (answers[currentQuestion?.questionId] || "").trim().split(/\s+/).length : 0} Words
-                    </span>
-                    <span className="text-slate-300">|</span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      {(answers[currentQuestion?.questionId] || "").length} Chars
-                    </span>
-                    <span className={answers[currentQuestion?.questionId] ? "text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-bold border border-emerald-200" : "text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-bold border border-amber-200"}>
-                      {answers[currentQuestion?.questionId] ? "Saved (Draft)" : "Unsaved"}
-                    </span>
-                    <button
-                      onClick={() => handleAnswer(currentQuestion?.questionId, "")}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold border border-red-200 transition cursor-pointer"
-                      title="Clear editor text"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Clear</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Textarea Notepad Area */}
-                <div className="flex-1 p-3.5 relative flex flex-col min-h-0 overflow-hidden">
-                  <textarea
-                    value={answers[currentQuestion?.questionId] || ""}
-                    onChange={(e) => handleAnswer(currentQuestion?.questionId, e.target.value)}
-                    placeholder="Type your response here... (Auto-saved)"
-                    className="w-full flex-1 p-3.5 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-slate-800 text-sm leading-relaxed resize-none font-sans"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Descriptive Section Navigation Controls */}
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
-              <button
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Previous</span>
-              </button>
-
-              <div className="flex items-center gap-3">
-                {currentIndex === questions.length - 1 ? (
-                  <button
-                    onClick={handleSubmit}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
-                  >
-                    <FileCheck2 className="w-4 h-4" />
-                    <span>Review & Submit</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleNext}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          <DescriptiveView
+            currentQuestion={currentQuestion}
+            questionIndexInSection={questionIndexInSection}
+            currentSection={currentSection}
+            currentIndex={currentIndex}
+            answers={answers}
+            setCurrentIndex={setCurrentIndex}
+            codingContainerRef={codingContainerRef}
+            isDraggingSplit={isDraggingSplit}
+            splitWidth={splitWidth}
+            handleMouseDownSplit={handleMouseDownSplit}
+            handleAnswer={handleAnswer}
+            handlePrevious={handlePrevious}
+            handleNext={handleNext}
+            handleSubmit={handleSubmit}
+            questions={questions}
+            nextSection={nextSection}
+          />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0 items-stretch overflow-hidden">
-            {/* Question Details & Option Selection Card (Left 8 cols) */}
-            <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
-              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm relative flex flex-col justify-between h-full overflow-hidden">
-                <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                  {/* Question Header */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
-                        Question {questionIndexInSection + 1} of {currentSection?.questions?.length || 1}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium">Multiple Choice</span>
-                    </div>
-                    {answers[currentQuestion?.questionId] && (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Answered
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Question Content */}
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed mb-4 shrink-0">
-                    {currentQuestion?.question || currentQuestion?.text}
-                  </h2>
-
-                  {/* Options List - Flexible layout */}
-                  <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-                    {currentQuestion?.options?.map((option) => {
-                      const isSelected = answers[currentQuestion.questionId] === option.optionId;
-                      return (
-                        <div
-                          key={option.optionId}
-                          onClick={() => handleAnswer(currentQuestion.questionId, option.optionId)}
-                          className={`group flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border transition cursor-pointer ${
-                            isSelected
-                              ? "bg-blue-50/80 border-blue-600 shadow-2xs"
-                              : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80"
-                          }`}
-                        >
-                          <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition shrink-0 ${
-                              isSelected
-                                ? "bg-blue-600 text-white"
-                                : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
-                            }`}
-                          >
-                            {option.optionId}
-                          </div>
-                          <span className={`text-sm sm:text-base transition ${isSelected ? "text-blue-950 font-semibold" : "text-slate-700"}`}>
-                            {option.text}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Navigation Controls - Anchored bottom bar */}
-                <div className="flex items-center justify-between pt-4 mt-3 border-t border-slate-200 shrink-0">
-                  <button
-                    onClick={handlePrevious}
-                    disabled={currentIndex === 0}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Previous</span>
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    {currentIndex === questions.length - 1 ? (
-                      <button
-                        onClick={handleSubmit}
-                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer"
-                      >
-                        <FileCheck2 className="w-4 h-4" />
-                        <span>Review & Submit</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleNext}
-                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
-                      >
-                        <span>{nextSection && questionIndexInSection === (currentSection?.questions?.length - 1) ? `Proceed to ${nextSection.sectionName}` : "Next"}</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Question Palette Sidebar (Right 4 cols) */}
-            <div className="lg:col-span-4 flex flex-col h-full overflow-hidden">
-              {renderPalette()}
-            </div>
-          </div>
+          <McqView
+            questionIndexInSection={questionIndexInSection}
+            currentSection={currentSection}
+            answers={answers}
+            currentQuestion={currentQuestion}
+            handleAnswer={handleAnswer}
+            handlePrevious={handlePrevious}
+            currentIndex={currentIndex}
+            handleSubmit={handleSubmit}
+            handleNext={handleNext}
+            questions={questions}
+            nextSection={nextSection}
+            handlePaletteClick={handlePaletteClick}
+          />
         )}
 
 

@@ -310,18 +310,6 @@ const Login = () => {
                 Direct access to the root portal URL without a <strong>Link ID</strong> is restricted.
               </p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-2 text-xs">
-              <span className="font-bold text-slate-700 block">Expected URL format:</span>
-              <code className="block bg-white p-2 rounded border border-slate-300 font-mono text-blue-700 break-all select-all">
-                https://d1t6qh90xvpukg.cloudfront.net/&lt;link_id&gt;
-              </code>
-              <p className="text-slate-500 text-[11px] pt-1">
-                Example: <span className="font-semibold text-slate-800">https://d1t6qh90xvpukg.cloudfront.net/846764</span>
-              </p>
-            </div>
-            <p className="text-xs text-slate-500">
-              Please click the unique test link provided by your institution or check your exam invitation.
-            </p>
           </div>
         )}
 
@@ -335,13 +323,11 @@ const Login = () => {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-extrabold text-slate-900">Assessment Not Found</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                No active assessment corresponds to the Link ID: <strong className="text-red-600 font-mono">{linkId}</strong>.
-              </p>
-            </div>
-            <p className="text-xs text-slate-500">
-              The link ID may be incorrect, expired, or removed by your exam coordinator. Please verify your link.
+               <p className="text-xs text-slate-500">
+              The URL may be incorrect, expired, or removed by your exam coordinator. Please verify your URL.
             </p>
+            </div>
+           
           </div>
         )}
 
