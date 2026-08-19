@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { registerCandidate, loginCandidate, fetchTestByLinkId, fetchProctoringSessions } from "../../services/api";
+import { registerCandidate, loginCandidate, fetchTestByLinkId } from "../../services/api";
 import IdpLogo from "../../components/IdpLogo";
 import Footer from "../../components/Footer";
 import { 
@@ -13,9 +13,6 @@ import {
   AlertCircle, 
   Lock, 
   CheckCircle2, 
-  KeyRound, 
-  LogIn, 
-  UserPlus, 
   Clock, 
   AlertOctagon, 
   RefreshCw, 
@@ -29,9 +26,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { linkId: paramLinkId } = useParams();
   
-  // Extract linkId from params or directly from pathname fallback (e.g. /846764)
+  // Extract linkId from params, query param, pathname, or localStorage fallback
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryLinkId = urlParams.get("linkId");
   const pathnameSegment = window.location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const linkId = paramLinkId || (pathnameSegment && pathnameSegment !== "index.html" ? pathnameSegment : "");
+  const linkId = paramLinkId || queryLinkId || (pathnameSegment && pathnameSegment !== "index.html" ? pathnameSegment : "") || localStorage.getItem("linkId") || "";
 
   // Link validation state
   const [validatingLink, setValidatingLink] = useState(true);
@@ -130,31 +129,13 @@ const Login = () => {
     setErrors({ ...errors, [name]: "", api: "" });
   };
 
-  // Strict list of allowed email domains for candidate registration & login
-  const ALLOWED_EMAIL_DOMAINS = new Set([
-    "gmail.com",
-    "yahoo.com",
-    "outlook.com",
-    "ritchennai.edu.in",
-    "rajalakshmi.edu.in",
-    "bitsathy.ac.in",
-  ]);
-
-  // Email format & domain validator (strictly allows only the 6 approved domains)
+  // Email format validator
   const isValidEmail = (email) => {
     const trimmed = (email || "").trim();
     if (!trimmed) return false;
 
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-    if (!emailRegex.test(trimmed) || trimmed.includes("..")) {
-      return false;
-    }
-
-    const parts = trimmed.split("@");
-    if (parts.length !== 2) return false;
-    const domain = parts[1].toLowerCase();
-
-    return ALLOWED_EMAIL_DOMAINS.has(domain);
+    return emailRegex.test(trimmed) && !trimmed.includes("..");
   };
 
 
@@ -244,14 +225,34 @@ const Login = () => {
     } catch (error) {
       const message = error.response?.data?.detail || "Registration failed. Please check your details and try again.";
 
-      // If email is already registered, try to auto-login
+      // If email is already registered, check if candidate already completed this specific testId
       if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exist")) {
         try {
           const loginRes = await loginCandidate({
             mailId: normalizedMail,
             testId: currentTestId,
           });
+
+          // Block navigation if user ALREADY completed/submitted this assessment for this testId
+          if (loginRes.data?.isSubmitted) {
+            setErrors({ api: "You have already attended/submitted this assessment." });
+            return;
+          }
+
           const userProfile = loginRes.data?.user || { mailId: normalizedMail };
+
+          // Clear previous cached session for fresh registration
+          localStorage.removeItem("questions");
+          localStorage.removeItem("answers");
+          localStorage.removeItem("currentIndex");
+          localStorage.removeItem("proctoringStartedTime");
+          localStorage.removeItem("proctoringWarningCount");
+          localStorage.removeItem("proctoringStatus");
+          localStorage.removeItem("testSubmitted");
+          localStorage.removeItem("submittedTestId");
+          localStorage.removeItem("testTerminated");
+          localStorage.removeItem("terminationReason");
+
           localStorage.setItem(
             "candidate",
             JSON.stringify({
@@ -264,7 +265,7 @@ const Login = () => {
           );
           navigate("/instructions");
         } catch (loginErr) {
-          setErrors({ api: "This email is already registered. Since the PIN feature was removed, please use a new email address to register." });
+          setErrors({ api: "This email is already registered for this assessment." });
         }
         return;
       }
@@ -446,6 +447,14 @@ const Login = () => {
             <div className="lg:col-span-7">
               <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
                 
+                {/* API Error Alert */}
+                {errors.api && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-lg mb-4 text-xs flex items-center gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{errors.api}</span>
+                  </div>
+                )}
+
                 {/* REGISTRATION FORM */}
                   <form onSubmit={handleRegisterSubmit} className="space-y-3">
                     

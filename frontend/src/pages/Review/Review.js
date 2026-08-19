@@ -163,16 +163,22 @@ const Review = () => {
 
           {/* Unified Metric Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-3">
-            {sectionsList.map((sec) => {
+            {sectionsList.map((sec, sIdx) => {
               const secQuestions = sec.questions;
               const secAnsweredCount = secQuestions.filter(q => !!answers[q.questionId]).length;
               const secUnansweredCount = secQuestions.length - secAnsweredCount;
+              const sectionLetter = String.fromCharCode(65 + sIdx);
+              let displayName = sec.sectionName || `Section ${sectionLetter}`;
+              if (!/^Section\s+[A-Z]:?/i.test(displayName)) {
+                displayName = `Section ${sectionLetter}: ${displayName}`;
+              }
+
               return (
                 <div key={sec.sectionId} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
                       <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>
-                      <span className="truncate">{sec.sectionName}</span>
+                      <span className="truncate">{displayName}</span>
                     </h3>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
                       {secAnsweredCount}/{secQuestions.length} Done
@@ -217,11 +223,17 @@ const Review = () => {
 
           {/* Responses Breakdown List */}
           <div className="space-y-4 mb-4 max-h-[220px] overflow-y-auto pr-2">
-            {sectionsList.map((sec) => (
-              <div key={sec.sectionId}>
-                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">
-                  {sec.sectionName}
-                </h3>
+            {sectionsList.map((sec, sIdx) => {
+              const sectionLetter = String.fromCharCode(65 + sIdx);
+              let displayName = sec.sectionName || `Section ${sectionLetter}`;
+              if (!/^Section\s+[A-Z]:?/i.test(displayName)) {
+                displayName = `Section ${sectionLetter}: ${displayName}`;
+              }
+              return (
+                <div key={sec.sectionId}>
+                  <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">
+                    {displayName}
+                  </h3>
                 <div className="space-y-2">
                   {sec.questions.map((q, idx) => {
                     const isAnswered = !!answers[q.questionId];
@@ -263,7 +275,8 @@ const Review = () => {
                   })}
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
 
           {/* Buttons */}

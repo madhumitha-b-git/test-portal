@@ -106,9 +106,14 @@ export const fetchQuestions = async (linkId) => {
     
     qs.forEach((q) => {
       let options = q.options || [];
-      // Always shuffle MCQ options for candidate anti-cheating isolation
+      // Shuffle MCQ option values for anti-cheating isolation,
+      // while keeping option IDs strictly in A, B, C, D order
       if (Array.isArray(options) && options.length > 0) {
-        options = shuffleArray(options);
+        const shuffled = shuffleArray(options);
+        options = shuffled.map((opt, optIdx) => ({
+          ...opt,
+          optionId: String.fromCharCode(65 + optIdx),
+        }));
       }
 
       const qType = section.questionType || q.questionType || q.type || (

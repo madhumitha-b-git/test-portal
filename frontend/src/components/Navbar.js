@@ -1,9 +1,7 @@
 import React from "react";
 import IdpLogo from "./IdpLogo";
-import { ShieldCheck, Lock } from "lucide-react";
 
 const Navbar = ({ candidate, hideUser = false }) => {
-  const testTitle = localStorage.getItem("testTitle");
 
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-40 px-4 sm:px-8 py-3 shadow-xs">

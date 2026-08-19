@@ -10,7 +10,6 @@ import CodingView from "./components/CodingView";
 import DescriptiveView from "./components/DescriptiveView";
 import ProctoringOverlay from "./components/ProctoringOverlay";
 
-const TAB_RETURN_LIMIT_MS = 15000;
 const WARNING_LOCKOUT_MS = 5000;
 const FULLSCREEN_TIMEOUT_MS = 10000;
 
@@ -341,6 +340,7 @@ const Test = () => {
     }).catch(() => {});
 
     localStorage.setItem("testSubmitted", "true");
+    localStorage.setItem("submittedTestId", testId);
     localStorage.setItem("testTerminated", "true");
     localStorage.setItem("terminationReason", reason);
     localStorage.removeItem("answers");
@@ -744,6 +744,7 @@ const Test = () => {
       }).catch(() => {});
 
       localStorage.setItem("testSubmitted", "true");
+      localStorage.setItem("submittedTestId", testId);
       localStorage.removeItem("answers");
       localStorage.removeItem("questions");
       localStorage.removeItem("currentIndex");
@@ -918,11 +919,11 @@ const Test = () => {
           <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 gap-1.5 max-w-full overflow-x-auto">
             {sectionsList.map((sec, sIdx) => {
               const isActive = currentSection?.sectionId === sec.sectionId;
-              const rawName = (sec.sectionName || "").toUpperCase();
-              let displayName = sec.sectionName || `Section ${sIdx + 1}`;
-              if (rawName === "MCQ" || rawName === "APTITUDE") displayName = "Section A: Aptitude";
-              else if (rawName === "CODING") displayName = "Section B: Coding";
-              else if (rawName === "DESCRIPTIVE") displayName = "Section C: Descriptive";
+              const sectionLetter = String.fromCharCode(65 + sIdx);
+              let displayName = sec.sectionName || `Section ${sectionLetter}`;
+              if (!/^Section\s+[A-Z]:?/i.test(displayName)) {
+                displayName = `Section ${sectionLetter}: ${displayName}`;
+              }
 
               return (
                 <button
