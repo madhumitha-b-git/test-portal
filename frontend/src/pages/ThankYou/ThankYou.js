@@ -35,8 +35,11 @@ const ThankYou = () => {
 
   const performLogoutAndRedirect = React.useCallback(() => {
     exitBrowserFullscreen();
-    localStorage.clear();
-    navigate("/", { replace: true });
+    localStorage.setItem("testConcluded", "true");
+    localStorage.removeItem("candidate");
+    localStorage.removeItem("answers");
+    localStorage.removeItem("questions");
+    navigate("/completed", { replace: true });
   }, [navigate]);
 
   useEffect(() => {
@@ -112,7 +115,7 @@ const ThankYou = () => {
 
           <p className="text-xs sm:text-sm text-slate-600 mb-6 max-w-md mx-auto">
             {!isTerminated
-              ? "Thank you for completing your assessment on IDP Hire360. Your answers have been safely recorded."
+              ? "Thank you for completing your assessment on Hire360. Your answers have been safely recorded."
               : terminationReason || "Your assessment session has been submitted."}
           </p>
 
@@ -160,7 +163,7 @@ const ThankYou = () => {
               <span>Exit Portal Now ({redirectCountdown}s)</span>
             </button>
             <p className="text-[11px] text-slate-500 font-medium">
-              Redirecting home & clearing session cache in <strong className="text-slate-800">{redirectCountdown}s</strong> (or press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px] text-slate-700">Esc</kbd>).
+              Concluding test session in <strong className="text-slate-800">{redirectCountdown}s</strong> (or press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded font-mono text-[10px] text-slate-700">Esc</kbd>).
             </p>
           </div>
 

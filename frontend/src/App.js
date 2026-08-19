@@ -5,18 +5,24 @@ import Instructions from "./pages/Instructions/Instructions";
 import Test from "./pages/Test/Test";
 import Review from "./pages/Review/Review";
 import ThankYou from "./pages/ThankYou/ThankYou";
+import Completed from "./pages/Completed/Completed";
 
 function LoginGuard({ children }) {
   const urlParams = new URLSearchParams(window.location.search);
   const queryLinkId = urlParams.get("linkId");
   const pathParts = window.location.pathname.split("/").filter(Boolean);
-  const pathLinkId = pathParts.length > 0 && !["instructions", "test", "review", "thankyou"].includes(pathParts[0]) ? pathParts[0] : null;
+  const pathLinkId = pathParts.length > 0 && !["instructions", "test", "review", "thankyou", "completed"].includes(pathParts[0]) ? pathParts[0] : null;
   const currentLinkId = queryLinkId || pathLinkId;
   const cachedLinkId = localStorage.getItem("linkId");
 
   // If candidate is opening a NEW linkId, bypass old test redirect guards
   if (currentLinkId && cachedLinkId && String(currentLinkId).trim() !== String(cachedLinkId).trim()) {
     return children;
+  }
+
+  const isConcluded = localStorage.getItem("testConcluded") === "true";
+  if (isConcluded) {
+    return <Navigate to="/completed" replace />;
   }
 
   const isSubmitted = localStorage.getItem("testSubmitted") === "true";
@@ -80,6 +86,7 @@ function App() {
         <Route path="/test" element={<TestGuard><Test /></TestGuard>} />
         <Route path="/review" element={<TestGuard><Review /></TestGuard>} />
         <Route path="/thankyou" element={<ThankYouGuard><ThankYou /></ThankYouGuard>} />
+        <Route path="/completed" element={<Completed />} />
       </Routes>
     </Router>
   );
