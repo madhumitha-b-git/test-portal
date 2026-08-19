@@ -21,7 +21,8 @@ import {
   RefreshCw, 
   Sparkles,
   Eye,
-  EyeOff
+  EyeOff,
+  Hash
 } from "lucide-react";
 
 const Login = () => {
@@ -47,6 +48,7 @@ const Login = () => {
     mailId: "",
     mobile: "",
     college: "",
+    regNo: "",
   });
 
   // Form error state
@@ -181,6 +183,10 @@ const Login = () => {
       newErrors.college = "College/Institution name is required";
     }
 
+    if (!regData.regNo.trim()) {
+      newErrors.regNo = "Registration number is required";
+    }
+
     return newErrors;
   };
 
@@ -207,6 +213,7 @@ const Login = () => {
         mailId: normalizedMail,
         mobile: regData.mobile.trim(),
         college: regData.college.trim(),
+        regNo: regData.regNo.trim(),
         password: "0000",
         testId: currentTestId,
       });
@@ -230,6 +237,7 @@ const Login = () => {
           mailId: res.data?.user?.mailId || normalizedMail,
           college: res.data?.user?.college || regData.college.trim(),
           mobile: res.data?.user?.mobile || regData.mobile.trim(),
+          regNo: res.data?.user?.regNo || regData.regNo.trim(),
         })
       );
 
@@ -253,6 +261,7 @@ const Login = () => {
               mailId: userProfile.mailId || normalizedMail,
               college: userProfile.college || regData.college.trim() || "",
               mobile: userProfile.mobile || regData.mobile.trim() || "",
+              regNo: userProfile.regNo || regData.regNo.trim() || "",
             })
           );
           navigate("/instructions");
@@ -486,6 +495,29 @@ const Login = () => {
                         />
                       </div>
                       {errors.mailId && <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.mailId}</p>}
+                    </div>
+
+                  {/* Registration Number */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        College Register Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Hash className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                        <input
+                          type="text"
+                          name="regNo"
+                          value={regData.regNo}
+                          onChange={handleRegChange}
+                          placeholder="Enter Register Number"
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                            errors.regNo
+                              ? "border-red-400 focus:ring-red-100"
+                              : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
+                          }`}
+                        />
+                      </div>
+                      {errors.regNo && <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.regNo}</p>}
                     </div>
 
                     {/* Mobile Number */}

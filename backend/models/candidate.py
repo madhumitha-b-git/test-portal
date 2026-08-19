@@ -25,6 +25,7 @@ class RegisterRequest(BaseModel):
     mailId: str
     mobile: str
     college: str
+    regNo: Optional[str] = ""
     password: str
     testId: Optional[str] = None
 

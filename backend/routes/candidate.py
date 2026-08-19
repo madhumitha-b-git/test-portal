@@ -16,6 +16,7 @@ def register(request: RegisterRequest):
             mailId=request.mailId,
             mobile=request.mobile,
             college=request.college,
+            regNo=request.regNo or "",
             password=request.password,
             testId=request.testId,
         )

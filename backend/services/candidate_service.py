@@ -46,6 +46,7 @@ def register_candidate(
     mobile: str,
     college: str,
     password: str,
+    regNo: str = "",
     testId: str = None,
 ):
     """
@@ -69,6 +70,8 @@ def register_candidate(
         "mailId": mailId,
         "mobile": mobile,
         "college": college,
+        "regNo": regNo,
+        "registerNo": regNo,
         "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     if clean_test_id:
@@ -115,16 +118,17 @@ def register_candidate(
         if clean_test_id:
             registrations[clean_test_id] = reg_entry
 
-        # Update candidate profile and append new testId registration
+        # Update candidate profile in candidate_table and append new testId registration
         try:
             table.update_item(
                 Key={"mailId": user_item.get("mailId", mailId)},
-                UpdateExpression="SET #n = :n, mobile = :m, college = :c, #p = :p, registrations = :r",
+                UpdateExpression="SET #n = :n, mobile = :m, college = :c, regNo = :rg, registerNo = :rg, #p = :p, registrations = :r",
                 ExpressionAttributeNames={"#n": "name", "#p": "password"},
                 ExpressionAttributeValues={
                     ":n": name,
                     ":m": mobile,
                     ":c": college,
+                    ":rg": regNo,
                     ":p": hashed_pw,
                     ":r": registrations,
                 }
@@ -136,6 +140,8 @@ def register_candidate(
                     "name": name,
                     "mobile": mobile,
                     "college": college,
+                    "regNo": regNo,
+                    "registerNo": regNo,
                     "password": hashed_pw,
                     "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "registrations": registrations,
@@ -149,6 +155,8 @@ def register_candidate(
                 "name": name,
                 "mobile": mobile,
                 "college": college,
+                "regNo": regNo,
+                "registerNo": regNo,
                 "password": hashed_pw,
                 "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "registrations": registrations,
@@ -163,6 +171,7 @@ def register_candidate(
             "mailId": mailId,
             "mobile": mobile,
             "college": college,
+            "regNo": regNo,
         },
         "isSubmitted": False
     }
@@ -193,7 +202,7 @@ def login_candidate(
         else:
             return {
                 "success": False,
-                "message": "No candidate account found with this email. Please register first."
+                "message": "No account found with this email address. Please register first."
             }
 
     user = existing_user["Item"]
@@ -233,6 +242,7 @@ def login_candidate(
             "mailId": user_mail_id,
             "mobile": user.get("mobile", ""),
             "college": user.get("college", ""),
+            "regNo": user.get("regNo", ""),
         },
         "isSubmitted": is_submitted
     }
