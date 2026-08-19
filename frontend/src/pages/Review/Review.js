@@ -116,14 +116,23 @@ const Review = () => {
 
 
       // Clear all cached test session data from localStorage
-      localStorage.removeItem("answers");
-      localStorage.removeItem("questions");
-      localStorage.removeItem("currentIndex");
-      localStorage.removeItem("proctoringStartedTime");
-      localStorage.removeItem("proctoringWarningCount");
-      localStorage.removeItem("proctoringStatus");
-      localStorage.removeItem("totalDurationMinutes");
-      localStorage.removeItem("lastPing");
+      const keysToRemove = [
+        "answers",
+        "questions",
+        "sections",
+        "currentIndex",
+        "testStarted",
+        "proctoringStartedTime",
+        "proctoringWarningCount",
+        "proctoringStatus",
+        "totalDurationMinutes",
+        "lastPing",
+      ];
+      keysToRemove.forEach((key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {}
+      });
 
       // Redirect to Thank You page
       navigate("/thankyou", { replace: true });

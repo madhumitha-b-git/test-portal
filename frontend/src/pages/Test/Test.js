@@ -343,13 +343,24 @@ const Test = () => {
     localStorage.setItem("submittedTestId", testId);
     localStorage.setItem("testTerminated", "true");
     localStorage.setItem("terminationReason", reason);
-    localStorage.removeItem("answers");
-    localStorage.removeItem("questions");
-    localStorage.removeItem("currentIndex");
-    localStorage.removeItem("proctoringStartedTime");
-    localStorage.removeItem("proctoringWarningCount");
-    localStorage.removeItem("proctoringStatus");
-    localStorage.removeItem("lastPing");
+
+    const keysToRemove = [
+      "answers",
+      "questions",
+      "sections",
+      "currentIndex",
+      "testStarted",
+      "proctoringStartedTime",
+      "proctoringWarningCount",
+      "proctoringStatus",
+      "totalDurationMinutes",
+      "lastPing",
+    ];
+    keysToRemove.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {}
+    });
 
     setTimeout(() => navigate("/thankyou", { replace: true }), 2000);
   }, [testId, navigate]);
@@ -745,13 +756,24 @@ const Test = () => {
 
       localStorage.setItem("testSubmitted", "true");
       localStorage.setItem("submittedTestId", testId);
-      localStorage.removeItem("answers");
-      localStorage.removeItem("questions");
-      localStorage.removeItem("currentIndex");
-      localStorage.removeItem("proctoringStartedTime");
-      localStorage.removeItem("proctoringWarningCount");
-      localStorage.removeItem("proctoringStatus");
-      localStorage.removeItem("lastPing");
+
+      const keysToRemove = [
+        "answers",
+        "questions",
+        "sections",
+        "currentIndex",
+        "testStarted",
+        "proctoringStartedTime",
+        "proctoringWarningCount",
+        "proctoringStatus",
+        "totalDurationMinutes",
+        "lastPing",
+      ];
+      keysToRemove.forEach((key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {}
+      });
 
       navigate("/thankyou", { replace: true });
     } catch (err) {

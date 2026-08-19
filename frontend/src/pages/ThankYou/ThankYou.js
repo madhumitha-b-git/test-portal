@@ -36,6 +36,25 @@ const ThankYou = () => {
   useEffect(() => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
+
+    // Automatically purge all cached test session data from localStorage
+    const keysToRemove = [
+      "answers",
+      "questions",
+      "sections",
+      "currentIndex",
+      "testStarted",
+      "proctoringStartedTime",
+      "proctoringWarningCount",
+      "proctoringStatus",
+      "totalDurationMinutes",
+      "lastPing",
+    ];
+    keysToRemove.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {}
+    });
   }, []);
 
   return (
