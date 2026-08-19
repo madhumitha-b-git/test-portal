@@ -214,7 +214,6 @@ const Login = () => {
         mobile: regData.mobile.trim(),
         college: regData.college.trim(),
         regNo: regData.regNo.trim(),
-        password: "0000",
         testId: currentTestId,
       });
 
@@ -245,12 +244,11 @@ const Login = () => {
     } catch (error) {
       const message = error.response?.data?.detail || "Registration failed. Please check your details and try again.";
 
-      // If email is already registered, try to auto-login with default PIN
+      // If email is already registered, try to auto-login
       if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exist")) {
         try {
           const loginRes = await loginCandidate({
             mailId: normalizedMail,
-            password: "0000",
             testId: currentTestId,
           });
           const userProfile = loginRes.data?.user || { mailId: normalizedMail };

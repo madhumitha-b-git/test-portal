@@ -8,7 +8,7 @@ router = APIRouter()
 def register(request: RegisterRequest):
     """
     POST /register
-    Validates input, hashes password, stores user in DynamoDB
+    Validates input, stores user in DynamoDB
     """
     try:
         result = candidate_service.register_candidate(
@@ -17,7 +17,6 @@ def register(request: RegisterRequest):
             mobile=request.mobile,
             college=request.college,
             regNo=request.regNo or "",
-            password=request.password,
             testId=request.testId,
         )
         if not result["success"]:
@@ -38,7 +37,6 @@ def login(request: LoginRequest):
     try:
         result = candidate_service.login_candidate(
             mailId=request.mailId,
-            password=request.password,
             testId=request.testId,
         )
         if not result["success"]:

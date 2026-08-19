@@ -45,12 +45,11 @@ def register_candidate(
     mailId: str,
     mobile: str,
     college: str,
-    password: str,
     regNo: str = "",
     testId: str = None,
 ):
     """
-    Stores candidate details in Users table with hashed password.
+    Stores candidate details in Users table without password.
     Scopes registrations per testId so candidate can attend multiple tests with same email without error.
     """
 
@@ -71,7 +70,6 @@ def register_candidate(
         "mobile": mobile,
         "college": college,
         "regNo": regNo,
-        "registerNo": regNo,
         "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     if clean_test_id:
@@ -100,8 +98,6 @@ def register_candidate(
         except Exception as e:
             print("Error checking answers table during registration:", e)
 
-    hashed_pw = hash_password(password)
-
     if "Item" in existing_user:
         user_item = existing_user["Item"]
         registrations = user_item.get("registrations", {})
@@ -112,7 +108,7 @@ def register_candidate(
         if clean_test_id and clean_test_id in registrations:
             return {
                 "success": False,
-                "message": "You are already registered for this assessment. Please log in using your 4-digit PIN."
+                "message": "You are already registered for this assessment."
             }
 
         if clean_test_id:
@@ -122,14 +118,13 @@ def register_candidate(
         try:
             table.update_item(
                 Key={"mailId": user_item.get("mailId", mailId)},
-                UpdateExpression="SET #n = :n, mobile = :m, college = :c, regNo = :rg, registerNo = :rg, #p = :p, registrations = :r",
-                ExpressionAttributeNames={"#n": "name", "#p": "password"},
+                UpdateExpression="SET #n = :n, mobile = :m, college = :c, regNo = :rg, registerNo = :rg, registrations = :r",
+                ExpressionAttributeNames={"#n": "name"},
                 ExpressionAttributeValues={
                     ":n": name,
                     ":m": mobile,
                     ":c": college,
                     ":rg": regNo,
-                    ":p": hashed_pw,
                     ":r": registrations,
                 }
             )
@@ -141,8 +136,6 @@ def register_candidate(
                     "mobile": mobile,
                     "college": college,
                     "regNo": regNo,
-                    "registerNo": regNo,
-                    "password": hashed_pw,
                     "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "registrations": registrations,
                 }
@@ -156,8 +149,6 @@ def register_candidate(
                 "mobile": mobile,
                 "college": college,
                 "regNo": regNo,
-                "registerNo": regNo,
-                "password": hashed_pw,
                 "registeredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "registrations": registrations,
             }
@@ -179,7 +170,7 @@ def register_candidate(
 
 def login_candidate(
     mailId: str,
-    password: str,
+    password: str = None,
     testId: str = None,
 ):
     """
@@ -207,14 +198,6 @@ def login_candidate(
 
     user = existing_user["Item"]
     user_mail_id = user.get("mailId", mailId).strip().lower()
-    stored_hash = user.get("password")
-
-    if stored_hash:
-        if not verify_password(password, stored_hash):
-            return {
-                "success": False,
-                "message": "Incorrect password / PIN. Please try again."
-            }
 
     # Check if THIS specific testId has already been submitted in the answers table
     answers_table = get_answers_table()
@@ -299,11 +282,6 @@ def submit_answers(
     table.put_item(
         Item={
             "mailId": mailId,
-            "testId": testId,
-            "sections": sections_data,
-            "submittedAt": submittedAt,
-            "isSubmitted": True,
-            "status": "SUBMITTED",
             "submissions": submissions,
         }
     )
@@ -345,16 +323,21 @@ def get_answers_by_test_id(
 ):
     """
     Fetches answers for a specific testId
-    from Answers table.
+    from Answers table submissions map.
     """
 
     table = get_answers_table()
-
-    response = table.scan(
-        FilterExpression=Attr("testId").eq(test_id)
-    )
-
-    return response.get("Items", [])
+    res = table.scan()
+    results = []
+    for item in res.get("Items", []):
+        submissions = item.get("submissions", {})
+        if test_id in submissions:
+            sub = submissions[test_id]
+            results.append({
+                "mailId": item.get("mailId"),
+                **sub
+            })
+    return results
 
 
 def get_candidate_answers(
@@ -417,4 +400,4 @@ def get_candidate(
             if candidate.get("mailId", "").strip().lower() == mail_id:
                 return candidate
 
-    return item or {}
+    return item or {}

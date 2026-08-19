@@ -26,7 +26,7 @@ class RegisterRequest(BaseModel):
     mobile: str
     college: str
     regNo: Optional[str] = ""
-    password: str
+    password: Optional[str] = None
     testId: Optional[str] = None
 
     @field_validator("name")
@@ -57,18 +57,11 @@ class RegisterRequest(BaseModel):
             raise ValueError("College name cannot be empty")
         return v.strip()
 
-    @field_validator("password")
-    @classmethod
-    def password_must_be_4_digit_pin(cls, v):
-        if not v.isdigit() or len(v) != 4:
-            raise ValueError("Password must be a 4-digit number")
-        return v
-
 
 class LoginRequest(BaseModel):
     """Model for POST /login request body"""
     mailId: str
-    password: str
+    password: Optional[str] = None
     testId: Optional[str] = None
 
 
@@ -78,13 +71,6 @@ class LoginRequest(BaseModel):
         if not is_valid_email_domain(v):
             raise ValueError("Email domain must be one of: gmail.com, yahoo.com, outlook.com, ritchennai.edu.in, rajalakshmi.edu.in, bitsathy.ac.in")
         return v.lower().strip()
-
-    @field_validator("password")
-    @classmethod
-    def password_must_be_4_digit_pin(cls, v):
-        if not v.isdigit() or len(v) != 4:
-            raise ValueError("Password must be a 4-digit number")
-        return v
 
 
 class AnswerItem(BaseModel):
