@@ -58,10 +58,10 @@ const ThankYou = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       
       {/* Top Header */}
-      <header className="w-full px-6 py-4 bg-white border-b border-slate-200 shadow-xs">
+      <header className="w-full px-6 py-3 bg-white border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <IdpLogo />
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
@@ -72,35 +72,35 @@ const ThankYou = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex items-center justify-center my-4">
+      <main className="flex-1 max-w-xl mx-auto w-full p-4 flex items-center justify-center">
         
-        <div className="bg-white p-8 sm:p-10 rounded-xl border border-slate-200 shadow-sm text-center w-full">
+        <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-center w-full">
           
           {/* Hero Icon */}
           {!isTerminated ? (
-            <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-9 h-9 text-emerald-600" />
+            <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
             </div>
           ) : (
-            <div className="w-16 h-16 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-5">
-              <ShieldCheck className="w-9 h-9 text-red-600" />
+            <div className="w-14 h-14 bg-red-50 border border-red-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-8 h-8 text-red-600" />
             </div>
           )}
 
           {/* Heading */}
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">
             {!isTerminated ? "Assessment Submitted Successfully!" : "Session Concluded"}
           </h1>
 
-          <p className="text-xs sm:text-sm text-slate-600 mb-6 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-slate-600 mb-5 max-w-md mx-auto">
             {!isTerminated
               ? "Thank you for completing your assessment on Hire360. Your answers have been safely recorded."
               : terminationReason || "Your assessment session has been submitted."}
           </p>
 
           {/* Receipt Card */}
-          <div className="bg-slate-50 p-5 rounded-lg border border-slate-200 text-left space-y-3 mb-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-left space-y-2 mb-5">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Submission Summary</span>
               <span className="inline-flex items-center gap-1 text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
                 <Award className="w-3 h-3 text-emerald-600" />
@@ -137,20 +137,13 @@ const ThankYou = () => {
             <div
               className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-xs"
             >
-              {/* <XCircle className="w-4 h-4" /> */}
               <span>You may now close this browser tab.</span>
             </div>
-            {/* <p className="text-[11px] text-slate-500 font-medium">
-              Your test session has ended. You may now close this browser tab.
-            </p> */}
           </div>
-
 
         </div>
       </main>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

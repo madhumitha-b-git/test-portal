@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { registerCandidate, loginCandidate, fetchTestByLinkId } from "../../services/api";
 import IdpLogo from "../../components/IdpLogo";
-import Footer from "../../components/Footer";
 import loginIllustration from "../../assets/login-illustration.jpg";
 import { 
   User, 
@@ -282,7 +281,7 @@ const Login = () => {
     <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       
       {/* Header */}
-      <header className="w-full px-6 py-4 bg-white border-b border-slate-200 shadow-xs">
+      <header className="w-full px-6 py-3 bg-white border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <IdpLogo />
           
@@ -291,7 +290,7 @@ const Login = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 flex items-center justify-center p-4">
         
         {/* ========================================================================= */}
         {/* 1. LOADING STATE */}
@@ -401,42 +400,42 @@ const Login = () => {
         {/* 6. SUCCESS STATE: ACTIVE ASSESSMENT PORTAL UI */}
         {/* ========================================================================= */}
         {!validatingLink && !linkError && (
-          <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col lg:flex-row">
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col lg:flex-row">
             
             {/* Left Column: Test Overview & Image */}
-            <div className="lg:w-1/2 bg-slate-50/50 p-8 lg:p-12 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">
-              <div className="mb-8 text-center space-y-2">
-                <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight">
+            <div className="lg:w-1/2 bg-slate-50/50 p-6 lg:p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">
+              <div className="mb-4 text-center space-y-1">
+                <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight">
                   Online Assessment
                 </h1>
-                <h2 className="text-lg lg:text-xl font-bold text-blue-600">
+                <h2 className="text-base lg:text-lg font-bold text-blue-600">
                   {testInfo.title}
                 </h2>
               </div>
-              <img src={loginIllustration} alt="Assessment Illustration" className="w-full max-w-sm object-contain mix-blend-multiply" />
+              <img src={loginIllustration} alt="Assessment Illustration" className="w-full max-w-[280px] object-contain mix-blend-multiply" />
             </div>
 
             {/* Right Column: Authentication Form */}
-            <div className="lg:w-1/2 p-6 lg:p-10 flex flex-col justify-center">
+            <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col justify-center">
                 
                 {/* Registration Warning */}
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-lg mb-5 text-xs flex items-start gap-2.5">
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg mb-4 text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
                   <p className="leading-relaxed">
-                    <strong>Important:</strong> Details entered during registration cannot be changed later. Please verify your information carefully before submitting.
+                    <strong>Important:</strong> Details entered during registration cannot be changed later.
                   </p>
                 </div>
 
                 {/* API Error Alert */}
                 {errors.api && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-lg mb-4 text-xs flex items-center gap-2.5">
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-lg mb-3 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                     <span>{errors.api}</span>
                   </div>
                 )}
 
                 {/* REGISTRATION FORM */}
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-2">
                     
                     {/* Full Name */}
                     <div>
@@ -451,7 +450,7 @@ const Login = () => {
                           value={regData.name}
                           onChange={handleRegChange}
                           placeholder="Enter your Name..."
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-1.5 rounded-md border focus:outline-none focus:ring-2 transition ${
                             errors.name
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
@@ -474,7 +473,7 @@ const Login = () => {
                           value={regData.mailId}
                           onChange={handleRegChange}
                           placeholder="Enter your Mail Id"
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-1.5 rounded-md border focus:outline-none focus:ring-2 transition ${
                             errors.mailId
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
@@ -497,7 +496,7 @@ const Login = () => {
                           value={regData.regNo}
                           onChange={handleRegChange}
                           placeholder="Enter Register Number"
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-1.5 rounded-md border focus:outline-none focus:ring-2 transition ${
                             errors.regNo
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
@@ -520,7 +519,7 @@ const Login = () => {
                           value={regData.mobile}
                           onChange={handleRegChange}
                           placeholder="10 digit mobile"
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-1.5 rounded-md border focus:outline-none focus:ring-2 transition ${
                             errors.mobile
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
@@ -543,7 +542,7 @@ const Login = () => {
                           value={regData.college}
                           onChange={handleRegChange}
                           placeholder="College name"
-                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 transition ${
+                          className={`w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-1.5 rounded-md border focus:outline-none focus:ring-2 transition ${
                             errors.college
                               ? "border-red-400 focus:ring-red-100"
                               : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
@@ -558,7 +557,7 @@ const Login = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
+                      className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-sm transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
                     >
                       {loading ? (
                         <>
@@ -582,8 +581,6 @@ const Login = () => {
 
       </main>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };
