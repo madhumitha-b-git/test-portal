@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { registerCandidate, loginCandidate, fetchTestByLinkId } from "../../services/api";
 import IdpLogo from "../../components/IdpLogo";
 import Footer from "../../components/Footer";
+import loginIllustration from "../../assets/login-illustration.jpg";
 import { 
   User, 
   Mail, 
@@ -91,7 +92,6 @@ const Login = () => {
         durationMinutes: duration,
         testId: test.testId,
       });
-
       // If candidate is switching to a different testId, clear old test session state
       const currentStoredTestId = localStorage.getItem("testId");
       if (currentStoredTestId && currentStoredTestId !== test.testId) {
@@ -401,52 +401,32 @@ const Login = () => {
         {/* 6. SUCCESS STATE: ACTIVE ASSESSMENT PORTAL UI */}
         {/* ========================================================================= */}
         {!validatingLink && !linkError && (
-          <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col lg:flex-row">
             
-            {/* Left Column: Test & Portal Overview */}
-            <div className="lg:col-span-5 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
-                <ShieldCheck className="w-4 h-4 text-blue-600" />
-                <span>Official Assessment Portal</span>
-              </div>
-
-              <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">
-                  {testInfo.title}
+            {/* Left Column: Test Overview & Image */}
+            <div className="lg:w-1/2 bg-slate-50/50 p-8 lg:p-12 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">
+              <div className="mb-8 text-center space-y-2">
+                <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight">
+                  Online Assessment
                 </h1>
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 w-fit px-3 py-1 rounded-md">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Test Status: Active • {testInfo.durationMinutes} Minutes</span>
-                </div>
+                <h2 className="text-lg lg:text-xl font-bold text-blue-600">
+                  {testInfo.title}
+                </h2>
               </div>
-
-              <p className="text-slate-600 text-sm leading-relaxed">
-                Welcome to <strong>IDP Hire360</strong>. Please complete candidate registration to begin your active test session.
-              </p>
-
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3 p-3.5 rounded-lg bg-white border border-slate-200 shadow-xs">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">Secure Online Evaluation</h4>
-                    <p className="text-[11px] text-slate-500">Automated responses sync & AI-guided proctoring.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-lg bg-white border border-slate-200 shadow-xs">
-                  <Lock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">Session Resumption</h4>
-                    <p className="text-[11px] text-slate-500">If your computer reboots, log in to continue without losing progress.</p>
-                  </div>
-                </div>
-              </div>
+              <img src={loginIllustration} alt="Assessment Illustration" className="w-full max-w-sm object-contain mix-blend-multiply" />
             </div>
 
-            {/* Right Column: Authentication Card */}
-            <div className="lg:col-span-7">
-              <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+            {/* Right Column: Authentication Form */}
+            <div className="lg:w-1/2 p-6 lg:p-10 flex flex-col justify-center">
                 
+                {/* Registration Warning */}
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3.5 rounded-lg mb-5 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                  <p className="leading-relaxed">
+                    <strong>Important:</strong> Details entered during registration cannot be changed later. Please verify your information carefully before submitting.
+                  </p>
+                </div>
+
                 {/* API Error Alert */}
                 {errors.api && (
                   <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-lg mb-4 text-xs flex items-center gap-2.5">
@@ -595,7 +575,6 @@ const Login = () => {
 
                   </form>
 
-              </div>
             </div>
 
           </div>

@@ -1,17 +1,17 @@
 import React, { useState } from "react";
-import logoImg from "../assets/idp-logo.png";
+import logoImg from "../assets/idp-logo-leaves.png";
 
 const IdpLogo = ({ className = "h-9", showTagline = true }) => {
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className={`flex items-center gap-3 select-none ${className}`}>
+    <div className={`flex items-center gap-2 select-none drop-shadow-md ${className}`}>
       {!imgError ? (
         <img
           src={logoImg}
           alt="IDP Education Logo"
           onError={() => setImgError(true)}
-          className="h-9 w-auto max-w-[160px] object-contain"
+          className="h-9 w-auto object-contain"
         />
       ) : (
         <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-blue-900 text-white font-extrabold text-lg shadow-sm border border-blue-950">
@@ -23,21 +23,16 @@ const IdpLogo = ({ className = "h-9", showTagline = true }) => {
 
       <div className="flex flex-col justify-center">
         <div className="flex items-center gap-1.5 leading-none">
-          <span className="font-extrabold tracking-tight text-lg text-slate-900">
-            IDP
+          <span className="font-black tracking-tight text-2xl text-slate-900">
+            idp
           </span>
-          <span className="font-bold tracking-tight text-lg text-blue-600">
+          <span className="font-bold tracking-tight text-2xl text-blue-600">
             Hire
           </span>
-          <span className="bg-blue-600 text-white font-extrabold text-xs px-1.5 py-0.5 rounded shadow-sm">
+          <span className="bg-blue-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow-sm ml-0.5 transform -translate-y-[1px]">
             360
           </span>
         </div>
-        {showTagline && (
-          <span className="text-[10px] font-medium tracking-wider uppercase text-slate-500 mt-0.5">
-            Enterprise Assessment Portal
-          </span>
-        )}
       </div>
     </div>
   );
