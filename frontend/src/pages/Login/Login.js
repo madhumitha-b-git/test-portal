@@ -278,19 +278,17 @@ const Login = () => {
 
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       
       {/* Header */}
-      <header className="w-full px-6 py-3 bg-white border-b border-slate-200 shadow-xs">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="fixed top-0 left-0 right-0 w-full bg-white border-b border-slate-200 z-40 px-4 sm:px-6 lg:px-10 2xl:px-16 py-3.5 shadow-xs">
+        <div className="w-full max-w-[1920px] mx-auto flex justify-between items-center">
           <IdpLogo />
-          
-
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 w-full flex items-center justify-center px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-8 pt-20 pb-24">
         
         {/* ========================================================================= */}
         {/* 1. LOADING STATE */}
@@ -400,7 +398,7 @@ const Login = () => {
         {/* 6. SUCCESS STATE: ACTIVE ASSESSMENT PORTAL UI */}
         {/* ========================================================================= */}
         {!validatingLink && !linkError && (
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col lg:flex-row">
+          <div className="w-full max-w-7xl 2xl:max-w-none mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 2xl:gap-16 items-center">
             
             {/* Left Column: Test Overview & Image */}
             <div className="lg:w-1/2 bg-slate-50/50 p-6 lg:p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">

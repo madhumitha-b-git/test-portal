@@ -602,15 +602,22 @@ const Test = () => {
 
     const blockCopyPasteAndZoom = (e) => {
       if (e.ctrlKey || e.metaKey) {
-        const key = e.key.toLowerCase();
-        // Block zoom shortcuts (Ctrl +, Ctrl -, Ctrl 0, Ctrl =)
-        if (["+", "-", "=", "_", "0"].includes(key) || e.code === "Equal" || e.code === "Minus" || e.code === "Digit0") {
+        const key = e.key ? e.key.toLowerCase() : "";
+        const code = e.code || "";
+        // Block zoom shortcuts (Ctrl +, Ctrl -, Ctrl 0, Ctrl =, NumpadAdd, NumpadSubtract, Numpad0)
+        if (
+          ["+", "-", "=", "_", "0"].includes(key) ||
+          ["Equal", "Minus", "Digit0", "NumpadAdd", "NumpadSubtract", "Numpad0"].includes(code) ||
+          e.keyCode === 187 || e.keyCode === 189 || e.keyCode === 107 || e.keyCode === 109 || e.keyCode === 48 || e.keyCode === 96
+        ) {
           e.preventDefault();
+          e.stopPropagation();
           return false;
         }
         // Block copy, paste, cut, select all, view source
         if (["c", "v", "x", "a", "u"].includes(key)) {
           e.preventDefault();
+          e.stopPropagation();
           return false;
         }
       }
@@ -934,7 +941,7 @@ const Test = () => {
       />
 
       {/* Main Examination View - Full Viewport Zero Scroll Fit */}
-      <main className="max-w-7xl mx-auto w-full p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+      <main className="w-full px-4 sm:px-6 lg:px-10 2xl:px-16 p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
 
         {/* Section Navigation Tabs Bar */}
         <div className="flex items-center justify-start pb-3 shrink-0">

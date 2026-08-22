@@ -148,25 +148,29 @@ const Review = () => {
       {/* Navbar */}
       <Navbar candidate={candidate} />
 
-      {/* Main Container - Compact Zero Scroll Layout */}
-      <main className="flex-1 max-w-5xl mx-auto w-full p-2 sm:p-3 my-1">
+      {/* Main Container - Fluid Responsive Layout */}
+      <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 pt-20 pb-24">
         
-        <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-5 sm:p-8 lg:p-10 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold mb-2">
+                <FileCheck className="w-4 h-4 text-blue-600" />
+                <span>Final Review</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                 Review Your Answers
               </h1>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Confirm your response summary before final submission.
               </p>
             </div>
           </div>
 
-          {/* Unified Metric Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-3">
+          {/* Section Summary Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {sectionsList.map((sec, sIdx) => {
               const secQuestions = sec.questions;
               const secAnsweredCount = secQuestions.filter(q => !!answers[q.questionId]).length;
@@ -180,17 +184,30 @@ const Review = () => {
               displayName = displayName.replace(/decriptive/i, "Descriptive");
 
               return (
-                <div key={sec.sectionId} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>
+                <div key={sec.sectionId} className="bg-slate-50/80 p-5 rounded-xl border border-slate-200 flex flex-col justify-between w-full min-w-0 space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 truncate">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0"></div>
                       <span className="truncate">{displayName}</span>
                     </h3>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 shrink-0">
+                      {secAnsweredCount}/{secQuestions.length} Done
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-slate-500 font-medium">Total: <b className="text-slate-800">{secQuestions.length}</b></span>
-                    <span className="text-[10px] text-emerald-600 font-medium">Ans: <b className="text-emerald-700">{secAnsweredCount}</b></span>
-                    <span className="text-[10px] text-amber-600 font-medium">Unans: <b className="text-amber-700">{secUnansweredCount}</b></span>
+
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+                      <p className="text-xl sm:text-2xl font-black text-blue-700">{secQuestions.length}</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Total</p>
+                    </div>
+                    <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200 text-center">
+                      <p className="text-xl sm:text-2xl font-black text-emerald-700">{secAnsweredCount}</p>
+                      <p className="text-[10px] sm:text-xs text-emerald-800 font-bold uppercase tracking-wider mt-1">Answered</p>
+                    </div>
+                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-center min-w-0">
+                      <p className="text-xl sm:text-2xl font-black text-amber-700">{secUnansweredCount}</p>
+                      <p className="text-[10px] sm:text-xs text-amber-800 font-bold uppercase tracking-wider mt-1 truncate" title="Unanswered">Unanswered</p>
+                    </div>
                   </div>
                 </div>
               );
@@ -199,8 +216,8 @@ const Review = () => {
 
           {/* Warning Banner */}
           {unansweredCount > 0 && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-sm font-medium flex items-center gap-3 w-full shadow-2xs">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
               <span>
                 You have <strong>{unansweredCount} unanswered question(s)</strong>. You can return to the test to answer them.
               </span>
@@ -209,14 +226,14 @@ const Review = () => {
 
           {/* API Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm font-medium flex items-center gap-3 w-full">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Responses Breakdown List */}
-          <div className="space-y-4 mb-4 flex-1 max-h-[400px] overflow-y-auto pr-2">
+          {/* Questions Breakdown List (Uncompressed, Natural Layout) */}
+          <div className="space-y-6">
             {sectionsList.map((sec, sIdx) => {
               const sectionLetter = String.fromCharCode(65 + sIdx);
               let displayName = sec.sectionName || `Section ${sectionLetter}`;
@@ -227,60 +244,62 @@ const Review = () => {
               displayName = displayName.replace(/decriptive/i, "Descriptive");
               
               return (
-                <div key={sec.sectionId}>
-                  <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 sticky top-0 bg-white py-1">
+                <div key={sec.sectionId} className="space-y-3">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pb-2 border-b border-slate-200">
                     {displayName}
                   </h3>
-                <div className="space-y-2">
-                  {sec.questions.map((q, idx) => {
-                    const isAnswered = !!answers[q.questionId];
-                    const isCoding = q.questionType === "CODING";
-                    const isDescriptive = q.questionType === "DESCRIPTIVE";
-                    const charLen = (answers[q.questionId] || "").length;
+                  <div className="space-y-3">
+                    {sec.questions.map((q, idx) => {
+                      const isAnswered = !!answers[q.questionId];
+                      const isCoding = q.questionType === "CODING";
+                      const isDescriptive = q.questionType === "DESCRIPTIVE";
+                      const charLen = (answers[q.questionId] || "").length;
 
-                    return (
-                      <div
-                        key={q.questionId}
-                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px]">
-                            {idx + 1}
-                          </span>
-                          <span className="text-slate-800 font-medium truncate max-w-[280px] sm:max-w-md">
-                            {q.question || q.text}
-                          </span>
+                      return (
+                        <div
+                          key={q.questionId}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200/90 gap-3 hover:border-slate-300 transition"
+                        >
+                          <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                            <span className="w-7 h-7 rounded-md bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                              {idx + 1}
+                            </span>
+                            <span className="text-sm sm:text-base font-semibold text-slate-800 flex-1 break-words min-w-0 leading-relaxed">
+                              {q.question || q.text}
+                            </span>
+                          </div>
+
+                          {isAnswered ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100/80 text-blue-900 font-bold text-xs border border-blue-200 shrink-0 self-start sm:self-center">
+                              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                              <span>
+                                {isCoding
+                                  ? "Code Submitted"
+                                  : isDescriptive
+                                  ? `Text Saved (${charLen} Chars)`
+                                  : `Option ${answers[q.questionId]}`}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100/80 text-amber-900 font-bold text-xs border border-amber-200 shrink-0 self-start sm:self-center">
+                              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>Unanswered</span>
+                            </span>
+                          )}
                         </div>
-
-                        {isAnswered ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[11px] border border-blue-200">
-                            <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                            {isCoding
-                              ? "Code Submitted"
-                              : isDescriptive
-                              ? `Text Saved (${charLen} Chars)`
-                              : `Option ${answers[q.questionId]}`}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[11px] border border-amber-200">
-                            <HelpCircle className="w-3 h-3 text-amber-600" />
-                            Unanswered
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
 
-          {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-200">
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-slate-200">
             <button
               onClick={() => navigate("/test")}
-              className="flex-1 py-2.5 px-5 rounded-lg font-semibold text-xs bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-xl font-bold text-sm bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Exam</span>
@@ -289,7 +308,7 @@ const Review = () => {
             <button
               onClick={handleFinalSubmit}
               disabled={loading}
-              className="flex-1 py-2.5 px-5 rounded-lg font-semibold text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <span>Submitting Test...</span>

@@ -70,7 +70,7 @@ const PythonEditor = ({ value = "", onChange, theme = "vs-dark", readOnly = fals
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace",
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
-          automaticLayout: false,
+          automaticLayout: true,
           wordWrap: "on",
           lineNumbers: "on",
           tabSize: 4,

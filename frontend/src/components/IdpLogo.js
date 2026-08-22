@@ -23,16 +23,22 @@ const IdpLogo = ({ className = "h-9", showTagline = true }) => {
 
       <div className="flex flex-col justify-center">
         <div className="flex items-center gap-1.5 leading-none">
-          <span className="font-black tracking-tight text-2xl text-slate-900">
-            idp
+        <div className="flex items-center gap-1.5 leading-none">
+          <span className="font-extrabold tracking-tight text-slate-900 text-lg sm:text-xl">
+            IDP
           </span>
-          <span className="font-bold tracking-tight text-2xl text-blue-600">
+          <span className="font-bold tracking-tight text-blue-600 text-lg sm:text-xl">
             Hire
           </span>
-          <span className="bg-blue-600 text-white font-bold text-xs px-2 py-0.5 rounded shadow-sm ml-0.5 transform -translate-y-[1px]">
+          <span className="bg-blue-600 text-white font-extrabold text-xs px-1.5 py-0.5 rounded shadow-sm ml-0.5">
             360
           </span>
         </div>
+        {showTagline && (
+          <span className="font-medium tracking-wider uppercase text-slate-500 text-[10px] mt-0.5">
+            Enterprise Assessment Portal
+          </span>
+        )}
       </div>
     </div>
   );

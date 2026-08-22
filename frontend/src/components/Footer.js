@@ -3,8 +3,8 @@ import { Shield, ExternalLink } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-slate-100 border-t border-slate-200 py-5 px-4 text-xs text-slate-600 mt-auto">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <footer className="fixed bottom-0 left-0 right-0 w-full bg-slate-100 border-t border-slate-200 py-4 px-4 sm:px-6 lg:px-10 2xl:px-16 text-xs text-slate-600 z-40">
+      <div className="w-full mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         
         {/* Left: Copyright */}
         <div className="flex items-center gap-2">

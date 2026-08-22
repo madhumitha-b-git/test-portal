@@ -57,13 +57,13 @@ const Instructions = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       
       {/* Navbar */}
       <Navbar candidate={candidate} />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl mx-auto w-full p-2 sm:p-4 flex flex-col justify-center">
+      <main className="flex-1 w-full max-w-7xl 2xl:max-w-none mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 py-6 pt-[73px] pb-[89px]">
         
         {/* Banner Card */}
         <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -89,7 +89,7 @@ const Instructions = () => {
           </div>
 
           {/* Sections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 2xl:gap-10 mt-6">
             
             {/* General Instructions */}
             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">

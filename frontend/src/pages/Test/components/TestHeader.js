@@ -12,8 +12,8 @@ const TestHeader = ({
   setCurrentIndex,
 }) => {
   return (
-    <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 pt-3.5 pb-3 shrink-0 shadow-xs">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+    <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-10 2xl:px-16 pt-3.5 pb-3 shrink-0 shadow-xs">
+      <div className="w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         
         {/* Left: Logo */}
         <div className="flex items-center gap-6">

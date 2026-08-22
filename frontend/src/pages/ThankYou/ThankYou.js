@@ -58,11 +58,11 @@ const ThankYou = () => {
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       
       {/* Top Header */}
-      <header className="w-full px-6 py-3 bg-white border-b border-slate-200 shadow-xs">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="fixed top-0 left-0 right-0 w-full px-4 sm:px-6 lg:px-10 2xl:px-16 py-4 bg-white border-b border-slate-200 shadow-xs z-40">
+        <div className="w-full mx-auto flex justify-between items-center">
           <IdpLogo />
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
             <Lock className="w-3.5 h-3.5 text-emerald-600" />
@@ -72,7 +72,7 @@ const ThankYou = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-xl mx-auto w-full p-4 flex items-center justify-center">
+      <main className="flex-1 w-full max-w-3xl lg:max-w-4xl 2xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center my-4 pt-[73px] pb-[89px]">
         
         <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-center w-full">
           
