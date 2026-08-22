@@ -116,7 +116,7 @@ const Instructions = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>For MCQs select your choice, for Coding use the Python IDE, and for Descriptive write in the auto-saved Notepad.</span>
+                  <span>For MCQs select your choice, for Coding use the Python IDE, and for Descriptive write in the auto-saved Descriptive Text Editor.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

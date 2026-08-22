@@ -102,10 +102,10 @@ const DescriptiveView = ({
           <div className="mt-3 pt-2.5 border-t border-slate-100 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100 shrink-0">
             <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-1">
               <FileText className="w-3.5 h-3.5 text-blue-600" />
-              <span>Notepad Guidelines</span>
+              <span>Text Editor Guidelines</span>
             </div>
             <p className="text-[11px] text-slate-600 leading-normal">
-              Type your essay or written content in the notepad area. Your text is
+              Type your essay or written response in the editor area. Your text is
               auto-saved in real-time as you write. Use the Clear button to start fresh.
             </p>
           </div>
@@ -115,7 +115,7 @@ const DescriptiveView = ({
         <div
           onMouseDown={handleMouseDownSplit}
           className="hidden lg:flex w-4 cursor-col-resize items-center justify-center bg-transparent hover:bg-blue-100/60 group transition-colors duration-150 relative z-10 shrink-0 mx-1 rounded-md"
-          title="Click and drag to adjust width between Task Prompt and Notepad Editor"
+          title="Click and drag to adjust width between Task Prompt and Descriptive Text Editor"
         >
           <div className="w-1.5 h-16 bg-slate-300 group-hover:bg-blue-600 rounded-full transition-colors flex flex-col justify-center items-center gap-1 shadow-xs">
             <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
@@ -124,7 +124,7 @@ const DescriptiveView = ({
           </div>
         </div>
 
-        {/* Right Column: Notepad Editor Card */}
+        {/* Right Column: Descriptive Text Editor Card */}
         <div
           style={{
             width: window.innerWidth >= 1024 ? `${100 - splitWidth}%` : "100%",
@@ -138,7 +138,7 @@ const DescriptiveView = ({
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Notepad Editor
+                Descriptive Text Editor
               </span>
             </div>
             <div className="flex items-center gap-3">
