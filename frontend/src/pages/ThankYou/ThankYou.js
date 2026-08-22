@@ -1,11 +1,8 @@
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import IdpLogo from "../../components/IdpLogo";
-import Footer from "../../components/Footer";
-import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock, XCircle } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock } from "lucide-react";
 
 const ThankYou = () => {
-  const navigate = useNavigate();
   const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
   const isTerminated = localStorage.getItem("testTerminated") === "true";
   const terminationReason = localStorage.getItem("terminationReason") || "";

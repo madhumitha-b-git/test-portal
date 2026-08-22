@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import { ShieldCheck, FileText, Monitor, AlertTriangle, CheckCircle, ArrowRight, Lock } from "lucide-react";
+import { ShieldCheck, FileText, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
 import { fetchQuestions } from "../../services/api";
 
 const Instructions = () => {
@@ -157,10 +157,8 @@ const Instructions = () => {
 
           </div>
 
-
-
           {/* Acceptance Checkbox */}
-          <div className="mt-4 pt-4 border-t border-slate-200">
+          {/* <div className="mt-4 pt-4 border-t border-slate-200">
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -172,6 +170,22 @@ const Instructions = () => {
                 I have read and agree to all rules, proctoring policies, and system guidelines for IDP Hire360.
               </span>
             </label>
+          </div> */}
+
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="flex items-start gap-3 select-none">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+
+              <span className="text-xs text-slate-700 font-semibold">
+                I have read and agree to all assessment rules, proctoring policies, and
+                system guidelines for IDP Hire360.
+              </span>
+            </div>
           </div>
 
           {/* Action Button */}

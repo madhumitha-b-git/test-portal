@@ -8,17 +8,11 @@ import {
   Mail, 
   Phone, 
   GraduationCap, 
-  ShieldCheck, 
   ArrowRight, 
   AlertCircle, 
-  Lock, 
-  CheckCircle2, 
   Clock, 
   AlertOctagon, 
   RefreshCw, 
-  Sparkles,
-  Eye,
-  EyeOff,
   Hash
 } from "lucide-react";
 
@@ -398,23 +392,23 @@ const Login = () => {
         {/* 6. SUCCESS STATE: ACTIVE ASSESSMENT PORTAL UI */}
         {/* ========================================================================= */}
         {!validatingLink && !linkError && (
-          <div className="w-full max-w-7xl 2xl:max-w-none mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 2xl:gap-16 items-center">
+          <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
             
             {/* Left Column: Test Overview & Image */}
-            <div className="lg:w-1/2 bg-slate-50/50 p-6 lg:p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-100">
-              <div className="mb-4 text-center space-y-1">
-                <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 leading-tight">
+            <div className="lg:col-span-5 bg-slate-50/70 p-6 lg:p-8 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-slate-200 text-center space-y-4">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">
                   Online Assessment
                 </h1>
-                <h2 className="text-base lg:text-lg font-bold text-blue-600">
+                <h2 className="text-base font-bold text-blue-600">
                   {testInfo.title}
                 </h2>
               </div>
-              <img src={loginIllustration} alt="Assessment Illustration" className="w-full max-w-[280px] object-contain mix-blend-multiply" />
+              <img src={loginIllustration} alt="Assessment Illustration" className="w-full max-w-[240px] object-contain mix-blend-multiply" />
             </div>
 
             {/* Right Column: Authentication Form */}
-            <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col justify-center">
+            <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-center">
                 
                 {/* Registration Warning */}
                 <div className="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg mb-4 text-xs flex items-start gap-2">

@@ -23,7 +23,6 @@ const IdpLogo = ({ className = "h-9", showTagline = true }) => {
 
       <div className="flex flex-col justify-center">
         <div className="flex items-center gap-1.5 leading-none">
-        <div className="flex items-center gap-1.5 leading-none">
           <span className="font-extrabold tracking-tight text-slate-900 text-lg sm:text-xl">
             IDP
           </span>
