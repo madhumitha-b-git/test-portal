@@ -33,11 +33,11 @@ const IdpLogo = ({ className = "h-9", showTagline = true }) => {
             360
           </span>
         </div>
-        {showTagline && (
+        {/* {showTagline && (
           <span className="font-medium tracking-wider uppercase text-slate-500 text-[10px] mt-0.5">
             Enterprise Assessment Portal
           </span>
-        )}
+        )} */}
       </div>
     </div>
   );

@@ -193,9 +193,9 @@ const Instructions = () => {
             <button
               onClick={handleStartTest}
               disabled={!accepted}
-              className={`w-full py-2.5 px-6 rounded-lg font-semibold text-sm shadow-xs transition duration-150 flex items-center justify-center gap-2 cursor-pointer ${
+              className={`w-full py-2.5 px-6 rounded-lg font-semibold text-sm shadow-xs transition duration-150 flex items-center justify-center gap-2 ${
                 accepted
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
               }`}
             >
