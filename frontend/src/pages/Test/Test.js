@@ -339,6 +339,7 @@ const Test = () => {
       warningCount: count,
     }).catch(() => {});
 
+    localStorage.setItem("submittedAtTime", new Date().toLocaleString());
     localStorage.setItem("testSubmitted", "true");
     localStorage.setItem("submittedTestId", testId);
     localStorage.setItem("testTerminated", "true");
@@ -779,6 +780,7 @@ const Test = () => {
         warningCount: count,
       }).catch(() => {});
 
+      localStorage.setItem("submittedAtTime", new Date().toLocaleString());
       localStorage.setItem("testSubmitted", "true");
       localStorage.setItem("submittedTestId", testId);
 

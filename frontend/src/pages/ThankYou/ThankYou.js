@@ -6,7 +6,9 @@ const ThankYou = () => {
   const [candidate] = useState(() => JSON.parse(localStorage.getItem("candidate") || "{}"));
   const [isTerminated] = useState(() => localStorage.getItem("testTerminated") === "true");
   const [terminationReason] = useState(() => localStorage.getItem("terminationReason") || "");
-  const [submissionTime] = useState(() => new Date().toLocaleString());
+  const [submissionTime] = useState(() => {
+    return localStorage.getItem("submittedAtTime") || new Date().toLocaleString();
+  });
 
   const exitBrowserFullscreen = () => {
     try {
@@ -33,13 +35,13 @@ const ThankYou = () => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
 
-    // Clear all localStorage after 30 seconds of landing on ThankYou page
+    // Clear all localStorage after 10 seconds of landing on ThankYou page
     // Component state keeps the UI rendered; refreshing page redirects to Home (/)
     const timer = setTimeout(() => {
       try {
         localStorage.clear();
       } catch (e) {}
-    }, 30000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, []);

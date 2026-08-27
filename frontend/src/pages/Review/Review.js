@@ -622,6 +622,8 @@ const Review = () => {
         warningCount: currentWarningCount,
       }).catch(() => {});
 
+      const submissionFormattedTime = new Date().toLocaleString();
+      localStorage.setItem("submittedAtTime", submissionFormattedTime);
       localStorage.setItem("testSubmitted", "true");
       localStorage.setItem("submittedTestId", testId);
 
