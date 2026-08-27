@@ -1,11 +1,7 @@
 import axios from "axios";
 
-// Execution endpoint for Python sandbox execution
-const PRIMARY_EXEC_URL = (process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000").trim();
-const FALLBACK_EXEC_URL = "http://localhost:8000";
-
-// const PRIMARY_EXEC_URL = (process.env.REACT_APP_API_BASE_URL || "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com").trim();
-// const FALLBACK_EXEC_URL = "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com";
+const PRIMARY_EXEC_URL = (process.env.REACT_APP_API_BASE_URL || "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com").trim();
+const FALLBACK_EXEC_URL = "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com";
 
 /**
  * Sends Python 3 code to the backend POST /execute endpoint.
