@@ -72,6 +72,61 @@ function ThankYouGuard({ children }) {
 
 
 function App() {
+  // ── Global Security: Block DevTools, Inspect Shortcuts, and Right-Click across all pages ──
+  React.useEffect(() => {
+    const blockDevToolsAndInspect = (e) => {
+      // Block F12
+      if (e.key === "F12" || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K (DevTools, Console, Inspector)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        const key = e.key ? e.key.toLowerCase() : "";
+        if (["i", "j", "c", "k"].includes(key)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+
+      // Block Ctrl+U / Cmd+Option+U (View Page Source)
+      if (
+        (e.ctrlKey && !e.shiftKey && !e.altKey && e.key?.toLowerCase() === "u") ||
+        (e.metaKey && e.altKey && e.key?.toLowerCase() === "u")
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block Cmd+Option+I, Cmd+Option+J, Cmd+Option+C on Mac
+      if (e.metaKey && e.altKey) {
+        const key = e.key ? e.key.toLowerCase() : "";
+        if (["i", "j", "c"].includes(key)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }
+    };
+
+    const blockContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener("keydown", blockDevToolsAndInspect, true);
+    document.addEventListener("contextmenu", blockContextMenu, true);
+
+    return () => {
+      document.removeEventListener("keydown", blockDevToolsAndInspect, true);
+      document.removeEventListener("contextmenu", blockContextMenu, true);
+    };
+  }, []);
+
   return (
     <Router>
       <Routes>

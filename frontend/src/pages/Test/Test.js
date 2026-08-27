@@ -348,11 +348,19 @@ const Test = () => {
       warningCount: count,
     }).catch(() => {});
 
+<<<<<<< HEAD
     sessionStorage.setItem("testSubmitted", "true");
     sessionStorage.setItem("submittedTestId", testId || "");
     sessionStorage.setItem("testTerminated", "true");
     sessionStorage.setItem("terminationReason", reason || "");
     sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
+=======
+    localStorage.setItem("submittedAtTime", new Date().toLocaleString());
+    localStorage.setItem("testSubmitted", "true");
+    localStorage.setItem("submittedTestId", testId);
+    localStorage.setItem("testTerminated", "true");
+    localStorage.setItem("terminationReason", reason);
+>>>>>>> 35f5cdc3157f2522f0ef028015e3e278b60ca447
 
     try {
       localStorage.clear();
@@ -674,25 +682,43 @@ const Test = () => {
     const blockCut = (e) => e.preventDefault();
     const blockPaste = (e) => e.preventDefault();
     const blockCopy = (e) => e.preventDefault();
+    const blockDragAndDrop = (e) => {
+      e.preventDefault();
+      return false;
+    };
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "Are you sure you want to leave? Your exam progress might be affected.";
+    };
 
     document.addEventListener("keydown", blockCopyPasteAndZoom);
     document.addEventListener("wheel", blockWheelZoom, { passive: false });
     document.addEventListener("keydown", blockFunctionKeys);
-    document.addEventListener("contextmenu", blockRightClick);
+    document.addEventListener("keydown", blockScreenshot);
+    document.addEventListener("keyup", blockScreenshot);
+    document.addEventListener("contextmenu", blockRightClick, true);
     document.addEventListener("cut", blockCut);
     document.addEventListener("paste", blockPaste);
     document.addEventListener("copy", blockCopy);
+    document.addEventListener("dragstart", blockDragAndDrop);
+    document.addEventListener("drop", blockDragAndDrop);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       document.removeEventListener("keydown", blockCopyPasteAndZoom);
       document.removeEventListener("wheel", blockWheelZoom);
       document.removeEventListener("keydown", blockFunctionKeys);
-      document.removeEventListener("contextmenu", blockRightClick);
+      document.removeEventListener("keydown", blockScreenshot);
+      document.removeEventListener("keyup", blockScreenshot);
+      document.removeEventListener("contextmenu", blockRightClick, true);
       document.removeEventListener("cut", blockCut);
       document.removeEventListener("paste", blockPaste);
       document.removeEventListener("copy", blockCopy);
+      document.removeEventListener("dragstart", blockDragAndDrop);
+      document.removeEventListener("drop", blockDragAndDrop);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isTerminated, terminateSession]);
+  }, [isTerminated, email, testId]);
 
   // ── Cleanup timers ──
   useEffect(() => {
@@ -761,9 +787,9 @@ const Test = () => {
         warningCount: count,
       }).catch(() => {});
 
-      sessionStorage.setItem("testSubmitted", "true");
-      sessionStorage.setItem("submittedTestId", testId || "");
-      sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
+      localStorage.setItem("submittedAtTime", new Date().toLocaleString());
+      localStorage.setItem("testSubmitted", "true");
+      localStorage.setItem("submittedTestId", testId);
 
       try {
         localStorage.clear();

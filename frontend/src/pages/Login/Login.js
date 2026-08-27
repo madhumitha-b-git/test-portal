@@ -302,37 +302,19 @@ const Login = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* 2. ERROR STATE: NO LINK ID IN URL (e.g. root url https://.../) */}
+        {/* 2. ERROR STATE: TEST NOT FOUND & NO LINK ID */}
         {/* ========================================================================= */}
-        {!validatingLink && linkError === "NO_LINK_ID" && (
-          <div className="bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-sm max-w-lg w-full text-center space-y-5">
-            <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto text-amber-600">
-              <AlertOctagon className="w-8 h-8" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-extrabold text-slate-900">Invalid Assessment URL</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Direct access to the root portal URL without a <strong>Link ID</strong> is restricted.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 3. ERROR STATE: TEST NOT FOUND */}
-        {/* ========================================================================= */}
-        {!validatingLink && linkError === "NOT_FOUND" && (
+        {!validatingLink && (linkError === "NOT_FOUND" || linkError === "NO_LINK_ID") && (
           <div className="bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-sm max-w-lg w-full text-center space-y-5">
             <div className="w-16 h-16 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mx-auto text-red-600">
               <AlertCircle className="w-8 h-8" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-extrabold text-slate-900">Assessment Not Found</h2>
-               <p className="text-xs text-slate-500">
-              The URL may be incorrect, expired, or removed by your exam coordinator. Please verify your URL.
-            </p>
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                The assessment link may be incorrect, expired, or inactive. Please verify your URL or contact your exam coordinator.
+              </p>
             </div>
-           
           </div>
         )}
 
@@ -360,13 +342,6 @@ const Login = () => {
               <p>• Check if your scheduled assessment window has started.</p>
               <p>• Contact your campus placement cell or exam administrator to activate the test.</p>
             </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition cursor-pointer border border-slate-300"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Page</span>
-            </button>
           </div>
         )}
 

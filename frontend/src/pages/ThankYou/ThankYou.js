@@ -1,21 +1,14 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import IdpLogo from "../../components/IdpLogo";
 import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock } from "lucide-react";
 
 const ThankYou = () => {
-  // Read candidate & termination details from sessionStorage or localStorage fallback
-  const storedCandidate = sessionStorage.getItem("submittedCandidate") || localStorage.getItem("candidate");
-  const candidate = JSON.parse(storedCandidate || "{}");
-  
-  const isTerminated =
-    sessionStorage.getItem("testTerminated") === "true" ||
-    localStorage.getItem("testTerminated") === "true";
-    
-  const terminationReason =
-    sessionStorage.getItem("terminationReason") ||
-    localStorage.getItem("terminationReason") ||
-    "";
-  const submissionTime = new Date().toLocaleString();
+  const [candidate] = useState(() => JSON.parse(localStorage.getItem("candidate") || "{}"));
+  const [isTerminated] = useState(() => localStorage.getItem("testTerminated") === "true");
+  const [terminationReason] = useState(() => localStorage.getItem("terminationReason") || "");
+  const [submissionTime] = useState(() => {
+    return localStorage.getItem("submittedAtTime") || new Date().toLocaleString();
+  });
 
   const exitBrowserFullscreen = () => {
     try {
@@ -38,15 +31,19 @@ const ThankYou = () => {
     } catch (e) {}
   };
 
-
   useEffect(() => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
 
-    // Completely clear localStorage (wipes all cached questions, answers, section lists, credentials, metrics, etc.)
-    try {
-      localStorage.clear();
-    } catch (e) {}
+    // Clear all localStorage after 10 seconds of landing on ThankYou page
+    // Component state keeps the UI rendered; refreshing page redirects to Home (/)
+    const timer = setTimeout(() => {
+      try {
+        localStorage.clear();
+      } catch (e) {}
+    }, 10000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -64,9 +61,9 @@ const ThankYou = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-3xl lg:max-w-4xl 2xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center my-4 pt-[73px] pb-[89px]">
+      <main className="flex-1 w-full max-w-lg sm:max-w-xl mx-auto px-4 sm:px-6 flex items-center justify-center my-4 pt-20 pb-24">
         
-        <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm text-center w-full">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm text-center w-full">
           
           {/* Hero Icon */}
           {!isTerminated ? (
