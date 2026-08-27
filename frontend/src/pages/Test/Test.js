@@ -348,19 +348,11 @@ const Test = () => {
       warningCount: count,
     }).catch(() => {});
 
-<<<<<<< HEAD
-    sessionStorage.setItem("testSubmitted", "true");
-    sessionStorage.setItem("submittedTestId", testId || "");
-    sessionStorage.setItem("testTerminated", "true");
-    sessionStorage.setItem("terminationReason", reason || "");
-    sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
-=======
     localStorage.setItem("submittedAtTime", new Date().toLocaleString());
     localStorage.setItem("testSubmitted", "true");
     localStorage.setItem("submittedTestId", testId);
     localStorage.setItem("testTerminated", "true");
     localStorage.setItem("terminationReason", reason);
->>>>>>> 35f5cdc3157f2522f0ef028015e3e278b60ca447
 
     try {
       localStorage.clear();
