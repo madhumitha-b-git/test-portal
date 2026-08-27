@@ -30,6 +30,7 @@ const Review = () => {
   // ── Ping timer to detect tab closure ──
   useEffect(() => {
     const pingInterval = setInterval(() => {
+      if (localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
       localStorage.setItem("lastPing", Date.now().toString());
     }, 1000);
     return () => clearInterval(pingInterval);
@@ -109,29 +110,15 @@ const Review = () => {
         warningCount,
       }).catch(() => {});
 
-      // Mark as submitted for this testId
-      localStorage.setItem("testSubmitted", "true");
-      localStorage.setItem("submittedTestId", testId);
+      // Store minimal submission state in sessionStorage so Thank You screen works and route guards prevent re-entry
+      sessionStorage.setItem("testSubmitted", "true");
+      sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
+      sessionStorage.setItem("submittedTestId", testId || "");
 
-
-      // Clear all cached test session data from localStorage
-      const keysToRemove = [
-        "answers",
-        "questions",
-        "sections",
-        "currentIndex",
-        "testStarted",
-        "proctoringStartedTime",
-        "proctoringWarningCount",
-        "proctoringStatus",
-        "totalDurationMinutes",
-        "lastPing",
-      ];
-      keysToRemove.forEach((key) => {
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {}
-      });
+      // Completely clear localStorage (wipes all cached questions, answers, section lists, credentials, metrics, etc.)
+      try {
+        localStorage.clear();
+      } catch (e) {}
 
       // Redirect to Thank You page
       navigate("/thankyou", { replace: true });

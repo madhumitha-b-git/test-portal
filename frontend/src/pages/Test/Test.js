@@ -123,11 +123,17 @@ const Test = () => {
   };
 
   useEffect(() => {
-    localStorage.setItem("answers", JSON.stringify(answers));
+    if (localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
+    if (answers && Object.keys(answers).length > 0) {
+      localStorage.setItem("answers", JSON.stringify(answers));
+    }
   }, [answers]);
 
   useEffect(() => {
-    localStorage.setItem("currentIndex", currentIndex.toString());
+    if (localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
+    if (currentIndex > 0) {
+      localStorage.setItem("currentIndex", currentIndex.toString());
+    }
   }, [currentIndex]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -315,7 +321,10 @@ const Test = () => {
       if (q.questionType === "CODING" || q.questionType === "DESCRIPTIVE") {
         respObj.typedAnswer = currentAnswers[q.questionId] || "";
       } else {
-        respObj.selectedOption = currentAnswers[q.questionId] || "";
+        const chosenId = currentAnswers[q.questionId] || "";
+        respObj.selectedOption = chosenId;
+        const matchedOpt = (q.options || []).find((opt) => (opt.adminOptionId || opt.originalOptionId || opt.optionId || opt.id) === chosenId);
+        respObj.selectedOptionText = matchedOpt ? (matchedOpt.text || matchedOpt.optionText || "") : chosenId;
       }
       sectionsMap[sId].responses.push(respObj);
     });
@@ -339,36 +348,24 @@ const Test = () => {
       warningCount: count,
     }).catch(() => {});
 
-    localStorage.setItem("testSubmitted", "true");
-    localStorage.setItem("submittedTestId", testId);
-    localStorage.setItem("testTerminated", "true");
-    localStorage.setItem("terminationReason", reason);
+    sessionStorage.setItem("testSubmitted", "true");
+    sessionStorage.setItem("submittedTestId", testId || "");
+    sessionStorage.setItem("testTerminated", "true");
+    sessionStorage.setItem("terminationReason", reason || "");
+    sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
 
-    const keysToRemove = [
-      "answers",
-      "questions",
-      "sections",
-      "currentIndex",
-      "testStarted",
-      "proctoringStartedTime",
-      "proctoringWarningCount",
-      "proctoringStatus",
-      "totalDurationMinutes",
-      "lastPing",
-    ];
-    keysToRemove.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {}
-    });
+    try {
+      localStorage.clear();
+    } catch (e) {}
 
     setTimeout(() => navigate("/thankyou", { replace: true }), 2000);
   }, [testId, navigate]);
 
   // ── Ping timer to detect tab closure ──
   useEffect(() => {
-    if (isTerminated) return;
+    if (isTerminated || localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
     const pingInterval = setInterval(() => {
+      if (localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
       localStorage.setItem("lastPing", Date.now().toString());
     }, 1000);
     return () => clearInterval(pingInterval);
@@ -733,7 +730,10 @@ const Test = () => {
         if (q.questionType === "CODING" || q.questionType === "DESCRIPTIVE") {
           respObj.typedAnswer = currentAnswers[q.questionId] || "";
         } else {
-          respObj.selectedOption = currentAnswers[q.questionId] || "";
+        const chosenId = currentAnswers[q.questionId] || "";
+        respObj.selectedOption = chosenId;
+        const matchedOpt = (q.options || []).find((opt) => (opt.adminOptionId || opt.originalOptionId || opt.optionId || opt.id) === chosenId);
+        respObj.selectedOptionText = matchedOpt ? (matchedOpt.text || matchedOpt.optionText || "") : chosenId;
         }
         sectionsMap[sId].responses.push(respObj);
       });
@@ -761,26 +761,13 @@ const Test = () => {
         warningCount: count,
       }).catch(() => {});
 
-      localStorage.setItem("testSubmitted", "true");
-      localStorage.setItem("submittedTestId", testId);
+      sessionStorage.setItem("testSubmitted", "true");
+      sessionStorage.setItem("submittedTestId", testId || "");
+      sessionStorage.setItem("submittedCandidate", JSON.stringify(candidate));
 
-      const keysToRemove = [
-        "answers",
-        "questions",
-        "sections",
-        "currentIndex",
-        "testStarted",
-        "proctoringStartedTime",
-        "proctoringWarningCount",
-        "proctoringStatus",
-        "totalDurationMinutes",
-        "lastPing",
-      ];
-      keysToRemove.forEach((key) => {
-        try {
-          localStorage.removeItem(key);
-        } catch (e) {}
-      });
+      try {
+        localStorage.clear();
+      } catch (e) {}
 
       navigate("/thankyou", { replace: true });
     } catch (err) {
@@ -808,7 +795,7 @@ const Test = () => {
 
   // ── Option select (saves dynamically to local cache) ──
   const handleAnswer = (questionId, optionId) => {
-    if (showWarningOverlay || isTerminated) return;
+    if (showWarningOverlay || isTerminated || localStorage.getItem("testSubmitted") === "true" || localStorage.getItem("testTerminated") === "true") return;
     const newAnswers = { ...answers, [questionId]: optionId };
     setAnswers(newAnswers);
     localStorage.setItem("answers", JSON.stringify(newAnswers));

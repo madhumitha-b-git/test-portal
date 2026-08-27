@@ -147,10 +147,15 @@ const Login = () => {
       newErrors.mailId = "Please enter a valid email address";
     }
 
-    if (!regData.mobile.trim()) {
+    const mob = regData.mobile.trim();
+    if (!mob) {
       newErrors.mobile = "Mobile number is required";
-    } else if (!/^\d{10}$/.test(regData.mobile.trim())) {
+    } else if (!/^\d{10}$/.test(mob)) {
       newErrors.mobile = "Mobile number must be exactly 10 digits";
+    } else if (!/^[6-9]/.test(mob)) {
+      newErrors.mobile = "Mobile number must start with 6, 7, 8, or 9";
+    } else if (["1234567890", "9876543210", "0123456789"].includes(mob) || new Set(mob).size === 1) {
+      newErrors.mobile = "Invalid mobile number. Please enter a valid mobile number";
     }
 
     if (!regData.college.trim()) {
@@ -192,6 +197,7 @@ const Login = () => {
       });
 
       // Clear previous cached session for fresh registration
+      sessionStorage.clear();
       localStorage.removeItem("questions");
       localStorage.removeItem("answers");
       localStorage.removeItem("currentIndex");

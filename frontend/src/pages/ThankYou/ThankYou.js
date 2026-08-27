@@ -3,9 +3,18 @@ import IdpLogo from "../../components/IdpLogo";
 import { CheckCircle2, ShieldCheck, Calendar, User, Mail, Award, Lock } from "lucide-react";
 
 const ThankYou = () => {
-  const candidate = JSON.parse(localStorage.getItem("candidate") || "{}");
-  const isTerminated = localStorage.getItem("testTerminated") === "true";
-  const terminationReason = localStorage.getItem("terminationReason") || "";
+  // Read candidate & termination details from sessionStorage or localStorage fallback
+  const storedCandidate = sessionStorage.getItem("submittedCandidate") || localStorage.getItem("candidate");
+  const candidate = JSON.parse(storedCandidate || "{}");
+  
+  const isTerminated =
+    sessionStorage.getItem("testTerminated") === "true" ||
+    localStorage.getItem("testTerminated") === "true";
+    
+  const terminationReason =
+    sessionStorage.getItem("terminationReason") ||
+    localStorage.getItem("terminationReason") ||
+    "";
   const submissionTime = new Date().toLocaleString();
 
   const exitBrowserFullscreen = () => {
@@ -34,24 +43,10 @@ const ThankYou = () => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
 
-    // Automatically purge all cached test session data from localStorage
-    const keysToRemove = [
-      "answers",
-      "questions",
-      "sections",
-      "currentIndex",
-      "testStarted",
-      "proctoringStartedTime",
-      "proctoringWarningCount",
-      "proctoringStatus",
-      "totalDurationMinutes",
-      "lastPing",
-    ];
-    keysToRemove.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {}
-    });
+    // Completely clear localStorage (wipes all cached questions, answers, section lists, credentials, metrics, etc.)
+    try {
+      localStorage.clear();
+    } catch (e) {}
   }, []);
 
   return (

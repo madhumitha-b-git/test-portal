@@ -2,8 +2,8 @@ import axios from "axios";
 
 // Base URL of FastAPI backend
 const API = axios.create({
-  // baseURL: "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com",
-  baseURL: "http://127.0.0.1:8000",
+   baseURL: "https://ylmuevgvjd.execute-api.ap-southeast-1.amazonaws.com",
+  //baseURL: "http://127.0.0.1:8000",
   //"",
   headers: {
     "Content-Type": "application/json",
@@ -16,39 +16,36 @@ export const registerCandidate = (data) => API.post("/register", data);
 // POST /login - Login candidate
 export const loginCandidate = (data) => API.post("/login", data);
 
-// GET /tests - Fetch single test validation by linkId
+// GET /tests/meta/{linkId} - Safe public metadata endpoint for login page
 export const fetchTestByLinkId = async (linkId) => {
   if (!linkId) {
     return { success: false, error: "NO_LINK_ID", message: "Direct access without a link ID is not permitted." };
   }
 
   try {
-    const resList = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
-    const tests = resList.data.items || [];
-    const matchedTest = tests.find((t) => String(t.linkId).trim() === String(linkId).trim());
-
-    if (!matchedTest) {
-      return { success: false, error: "NOT_FOUND", message: `No test found for link ID '${linkId}'.` };
+    const response = await API.get(`/tests/meta/${linkId}`);
+    const data = response.data;
+    if (!data.success) {
+      return data;
     }
 
-    // Determine active status: check ONLY 'status'
-    const statusLower = matchedTest.status ? matchedTest.status.toLowerCase().trim() : "";
-    const isActive = statusLower === "active";
+    const testMeta = data.test || {};
+    const isActive = testMeta.isActive;
 
     if (!isActive) {
       return {
         success: false,
         error: "NOT_ACTIVE",
-        title: matchedTest.title,
-        message: `The assessment '${matchedTest.title}' is currently not active.`,
-        test: matchedTest,
+        title: testMeta.title,
+        message: `The assessment '${testMeta.title}' is currently not active.`,
+        test: testMeta,
       };
     }
 
     return {
       success: true,
-      test: matchedTest,
-      title: matchedTest.title || "Online Assessment",
+      test: testMeta,
+      title: testMeta.title || "Online Assessment",
     };
   } catch (error) {
     console.error("Error verifying test by linkId:", error);
@@ -56,29 +53,19 @@ export const fetchTestByLinkId = async (linkId) => {
   }
 };
 
-// GET /questions - Fetch questions from Admin API
+// GET /tests/questions/{linkId} - Fetch sanitized questions (no correct answers)
 export const fetchQuestions = async (linkId) => {
   let testToUse = null;
 
   try {
     if (linkId) {
-      const result = await fetchTestByLinkId(linkId);
-      if (result.success && result.test) {
-        testToUse = result.test;
-      }
-    }
-
-    if (!testToUse) {
-      const resList = await axios.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests");
-      const tests = resList.data.items || [];
-      if (tests.length > 0) {
-        const firstTest = tests[0];
-        const resDetail = await axios.get(`https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/${firstTest.testId}`);
-        testToUse = resDetail.data;
+      const response = await API.get(`/tests/questions/${linkId}`);
+      if (response.data && response.data.success && response.data.data) {
+        testToUse = response.data.data;
       }
     }
   } catch (error) {
-    console.error("Error fetching questions from Admin API:", error);
+    console.error("Error fetching questions:", error);
   }
 
   if (!testToUse) {
@@ -110,10 +97,17 @@ export const fetchQuestions = async (linkId) => {
       // while keeping option IDs strictly in A, B, C, D order
       if (Array.isArray(options) && options.length > 0) {
         const shuffled = shuffleArray(options);
-        options = shuffled.map((opt, optIdx) => ({
-          ...opt,
-          optionId: String.fromCharCode(65 + optIdx),
-        }));
+        options = shuffled.map((opt, optIdx) => {
+          const masterId = opt.optionId || opt.adminOptionId || opt.originalOptionId || opt.id || String.fromCharCode(65 + optIdx);
+          return {
+            ...opt,
+            adminOptionId: masterId,
+            originalOptionId: masterId,
+            optionId: masterId,
+            displayLabel: String.fromCharCode(65 + optIdx),
+            optionText: opt.text || opt.optionText || opt.value || "",
+          };
+        });
       }
 
       const qType = section.questionType || q.questionType || q.type || (

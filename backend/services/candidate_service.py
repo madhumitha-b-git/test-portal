@@ -246,11 +246,17 @@ def submit_answers(
 
     import requests
     real_section_map = {}
+    real_question_map = {}
     try:
         res = requests.get(f"https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/{testId}", timeout=5)
         if res.status_code == 200:
             test_data = res.json()
-            real_section_map = {s.get("sectionId"): s for s in test_data.get("sections", [])}
+            for s in test_data.get("sections", []):
+                real_section_map[s.get("sectionId")] = s
+                for q in s.get("questions", []):
+                    q_id = q.get("questionId")
+                    if q_id:
+                        real_question_map[q_id] = q
     except Exception as e:
         print(f"Error fetching test details: {e}")
 
@@ -264,6 +270,32 @@ def submit_answers(
                 sec_data["sectionName"] = real_sec["sectionName"]
             if real_sec.get("questionType"):
                 sec_data["questionType"] = real_sec["questionType"]
+
+        # Guarantee selectedOption and selectedOptionText for all MCQ responses
+        responses = sec_data.get("responses", [])
+        for resp in responses:
+            resp.pop("selectedOptionId", None)  # Remove redundant selectedOptionId
+            q_id = resp.get("questionId")
+            sel_opt = resp.get("selectedOption")
+            if sel_opt and q_id in real_question_map:
+                real_q = real_question_map[q_id]
+                options = real_q.get("options", [])
+                matched_opt = None
+                for opt in options:
+                    if opt.get("optionId") == sel_opt or opt.get("id") == sel_opt or opt.get("text") == sel_opt:
+                        matched_opt = opt
+                        break
+
+                if matched_opt:
+                    if not resp.get("selectedOptionText"):
+                        resp["selectedOptionText"] = matched_opt.get("text") or matched_opt.get("optionText") or matched_opt.get("value") or sel_opt
+                else:
+                    if not resp.get("selectedOptionText"):
+                        resp["selectedOptionText"] = sel_opt
+            elif sel_opt:
+                if not resp.get("selectedOptionText"):
+                    resp["selectedOptionText"] = sel_opt
+
         sections_data.append(sec_data)
 
     # Fetch existing record to maintain testId submissions dictionary
@@ -392,12 +424,94 @@ def get_candidate(
         }
     )
 
-    item = response.get("Item")
-    if not item:
-        # Fallback scan
-        scan_res = users_table.scan()
-        for candidate in scan_res.get("Items", []):
-            if candidate.get("mailId", "").strip().lower() == mail_id:
-                return candidate
-
     return item or {}
+
+
+def get_test_meta(link_id: str):
+    """
+    Fetches safe test metadata (title, duration, status) without any questions or answers.
+    """
+    import requests
+    try:
+        res = requests.get("https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests", timeout=5)
+        if res.status_code == 200:
+            tests = res.json().get("items", [])
+            matched = next((t for t in tests if str(t.get("linkId", "")).strip() == str(link_id).strip()), None)
+            if matched:
+                status_lower = (matched.get("status") or "").lower().strip()
+                return {
+                    "success": True,
+                    "test": {
+                        "testId": matched.get("testId"),
+                        "linkId": matched.get("linkId"),
+                        "title": matched.get("title", "Online Assessment"),
+                        "description": matched.get("description", ""),
+                        "status": matched.get("status", "active"),
+                        "isActive": status_lower == "active",
+                        "totalDurationMinutes": matched.get("totalDurationMinutes") or matched.get("durationMinutes") or 60,
+                        "totalMarks": matched.get("totalMarks", 50),
+                    }
+                }
+            return {"success": False, "error": "NOT_FOUND", "message": f"No test found for link ID '{link_id}'."}
+    except Exception as e:
+        print(f"Error fetching test meta: {e}")
+    return {"success": False, "error": "API_ERROR", "message": "Failed to fetch test metadata."}
+
+
+def get_sanitized_questions(link_id: str):
+    """
+    Fetches test questions for an active session and strips all correct answers / correctOptionId.
+    """
+    import requests
+    try:
+        meta_res = get_test_meta(link_id)
+        if not meta_res.get("success"):
+            return meta_res
+
+        test_id = meta_res["test"]["testId"]
+        res = requests.get(f"https://utmtbogmaf.execute-api.ap-southeast-1.amazonaws.com/tests/{test_id}", timeout=5)
+        if res.status_code == 200:
+            test_data = res.json()
+            sections = test_data.get("sections", [])
+
+            sanitized_sections = []
+            for s in sections:
+                san_sec = {
+                    "sectionId": s.get("sectionId"),
+                    "sectionName": s.get("sectionName"),
+                    "questionType": s.get("questionType"),
+                    "durationMinutes": s.get("durationMinutes"),
+                    "marks": s.get("marks"),
+                    "questions": []
+                }
+                for q in s.get("questions", []):
+                    san_q = {
+                        "questionId": q.get("questionId"),
+                        "question": q.get("question"),
+                        "questionType": q.get("questionType", s.get("questionType")),
+                        "marks": q.get("marks", 1),
+                        "options": []
+                    }
+                    for opt in q.get("options", []):
+                        san_opt = {
+                            "optionId": opt.get("optionId") or opt.get("id"),
+                            "text": opt.get("text") or opt.get("optionText") or opt.get("value")
+                        }
+                        san_q["options"].append(san_opt)
+                    san_sec["questions"].append(san_q)
+                sanitized_sections.append(san_sec)
+
+            all_questions = [q for sec in sanitized_sections for q in sec["questions"]]
+            return {
+                "success": True,
+                "data": {
+                    "testId": test_id,
+                    "title": test_data.get("title", "Online Assessment"),
+                    "totalDurationMinutes": test_data.get("totalDurationMinutes") or test_data.get("durationMinutes") or 60,
+                    "sections": sanitized_sections,
+                    "questions": all_questions
+                }
+            }
+    except Exception as e:
+        print(f"Error fetching sanitized questions: {e}")
+    return {"success": False, "error": "API_ERROR", "message": "Failed to fetch test questions."}

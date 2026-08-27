@@ -5,7 +5,7 @@ import subprocess
 import ast
 
 MAX_OUTPUT_BYTES = 10 * 1024  # 10 KB
-EXECUTION_TIMEOUT = 3.0       # 3 seconds timeout
+EXECUTION_TIMEOUT = 8.0       # 8 seconds timeout to accommodate Lambda process initialization
 
 # Standard library modules permitted for technical coding assessments
 ALLOWED_MODULES = {
@@ -89,10 +89,13 @@ def run_python_code_execution(code: str) -> dict:
         }
 
     # Sanitize environment variables: strip all AWS credentials & app secrets
-    sanitized_env = {}
-    for key in ["PATH", "SYSTEMROOT", "PYTHONPATH", "HOME", "TMPDIR", "TEMP", "TMP"]:
-        if key in os.environ:
-            sanitized_env[key] = os.environ[key]
+    sanitized_env = dict(os.environ)
+    for secret_key in [
+        "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+        "AWS_SECURITY_TOKEN", "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+        "AWS_CONTAINER_CREDENTIALS_FULL_URI", "SNS_TOPIC_ARN"
+    ]:
+        sanitized_env.pop(secret_key, None)
 
     start_time = time.perf_counter()
 

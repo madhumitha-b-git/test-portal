@@ -105,3 +105,27 @@ def get_user_details(mail_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tests/meta/{link_id}")
+def get_test_metadata(link_id: str):
+    """
+    GET /tests/meta/{link_id}
+    Safe public metadata endpoint for login page - NO questions or answers included.
+    """
+    try:
+        return candidate_service.get_test_meta(link_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tests/questions/{link_id}")
+def get_sanitized_test_questions(link_id: str):
+    """
+    GET /tests/questions/{link_id}
+    Exam session question endpoint - strips correct answers / correctOptionId.
+    """
+    try:
+        return candidate_service.get_sanitized_questions(link_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

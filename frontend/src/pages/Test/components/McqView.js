@@ -48,14 +48,16 @@ const McqView = ({
 
             {/* Options List - Flexible layout */}
             <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-              {currentQuestion?.options?.map((option) => {
+              {currentQuestion?.options?.map((option, idx) => {
+                const optValue = option.adminOptionId || option.originalOptionId || option.optionId || option.id;
+                const badgeLabel = option.displayLabel || String.fromCharCode(65 + idx);
                 const isSelected =
-                  answers[currentQuestion.questionId] === option.optionId;
+                  answers[currentQuestion.questionId] === optValue;
                 return (
                   <div
-                    key={option.optionId}
+                    key={optValue || idx}
                     onClick={() =>
-                      handleAnswer(currentQuestion.questionId, option.optionId)
+                      handleAnswer(currentQuestion.questionId, optValue)
                     }
                     className={`group flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border transition cursor-pointer ${
                       isSelected
@@ -70,7 +72,7 @@ const McqView = ({
                           : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                       }`}
                     >
-                      {option.optionId}
+                      {badgeLabel}
                     </div>
                     <span
                       className={`text-sm sm:text-base transition ${
@@ -79,7 +81,7 @@ const McqView = ({
                           : "text-slate-700"
                       }`}
                     >
-                      {option.text}
+                      {option.text || option.optionText}
                     </span>
                   </div>
                 );

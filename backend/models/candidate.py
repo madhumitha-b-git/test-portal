@@ -46,9 +46,14 @@ class RegisterRequest(BaseModel):
     @field_validator("mobile")
     @classmethod
     def mobile_must_be_valid(cls, v):
-        if not v.isdigit() or len(v) != 10:
-            raise ValueError("Mobile must be 10 digits")
-        return v
+        v_clean = (v or "").strip()
+        if not v_clean.isdigit() or len(v_clean) != 10:
+            raise ValueError("Mobile number must be exactly 10 digits")
+        if v_clean[0] not in ("6", "7", "8", "9"):
+            raise ValueError("Mobile number must start with 6, 7, 8, or 9")
+        if v_clean in {"1234567890", "9876543210", "0123456789"} or len(set(v_clean)) == 1:
+            raise ValueError("Invalid mobile number. Please provide a valid mobile number.")
+        return v_clean
 
     @field_validator("college")
     @classmethod
@@ -77,6 +82,8 @@ class AnswerItem(BaseModel):
     """Single question answer"""
     questionId: str
     selectedOption: Optional[str] = None
+    selectedOptionId: Optional[str] = None
+    selectedOptionText: Optional[str] = None
     typedAnswer: Optional[str] = None
 
 class SectionResponses(BaseModel):
