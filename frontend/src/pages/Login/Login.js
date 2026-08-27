@@ -20,11 +20,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { linkId: paramLinkId } = useParams();
   
-  // Extract linkId from params, query param, pathname, or localStorage fallback
+  // Extract linkId strictly from URL params, query param, or pathname segment (NO localStorage fallback)
   const urlParams = new URLSearchParams(window.location.search);
   const queryLinkId = urlParams.get("linkId");
   const pathnameSegment = window.location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
-  const linkId = paramLinkId || queryLinkId || (pathnameSegment && pathnameSegment !== "index.html" ? pathnameSegment : "") || localStorage.getItem("linkId") || "";
+  const linkId = paramLinkId || queryLinkId || (pathnameSegment && pathnameSegment !== "index.html" && pathnameSegment !== "static" ? pathnameSegment : "");
 
   // Link validation state
   const [validatingLink, setValidatingLink] = useState(true);
@@ -56,8 +56,10 @@ const Login = () => {
       setValidatingLink(true);
       setLinkError(null);
 
-      // 1. Direct root URL without linkId is strictly blocked
+      // 1. Direct root URL without linkId in URL is strictly blocked
       if (!linkId) {
+        localStorage.removeItem("linkId");
+        sessionStorage.removeItem("linkId");
         setLinkError("NO_LINK_ID");
         setValidatingLink(false);
         return;
