@@ -100,7 +100,16 @@ def get_user_details(mail_id: str):
         data = candidate_service.get_candidate(mail_id)
         if not data:
             raise HTTPException(status_code=404, detail="User not found")
-        return {"user": data}
+        
+        # Build comprehensive response object to satisfy all reporting schema expectations
+        res = {
+            "user": data,
+            "candidate": data,
+        }
+        res.update(data)
+        if "name" in data and "candidateName" not in res:
+            res["candidateName"] = data["name"]
+        return res
     except HTTPException:
         raise
     except Exception as e:

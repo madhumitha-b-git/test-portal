@@ -12,6 +12,7 @@ def publish_test_submitted_event(
     mail_id: str,
     sections: list,
     submitted_at: str,
+    candidate_data: dict = None,
 ):
     """
     Publishes submitted test responses to SNS.
@@ -45,11 +46,28 @@ def publish_test_submitted_event(
             sec_item["questionType"] = sec_type
         mapped_sections.append(sec_item)
 
+    if not candidate_data:
+        try:
+            from services.candidate_service import get_candidate
+            candidate_data = get_candidate(mail_id)
+        except Exception:
+            candidate_data = {}
+
+    cand_name = candidate_data.get("name") or candidate_data.get("candidateName") or ""
+    cand_college = candidate_data.get("college") or ""
+    cand_mobile = candidate_data.get("mobile") or ""
+    cand_regNo = candidate_data.get("regNo") or candidate_data.get("registerNo") or ""
+
     event = {
         "mailId": mail_id,
         "sections": mapped_sections,
         "submittedAt": submitted_at,
         "testId": test_id,
+        "name": cand_name,
+        "candidateName": cand_name,
+        "college": cand_college,
+        "mobile": cand_mobile,
+        "regNo": cand_regNo,
     }
 
     sns_response = sns_client.publish(

@@ -35,13 +35,13 @@ const ThankYou = () => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
 
-    // Clear all localStorage after 10 seconds of landing on ThankYou page
+    // Clear all localStorage after 5 seconds of landing on ThankYou page
     // Component state keeps the UI rendered; refreshing page redirects to Home (/)
     const timer = setTimeout(() => {
       try {
         localStorage.clear();
       } catch (e) {}
-    }, 10000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);

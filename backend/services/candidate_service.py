@@ -318,11 +318,13 @@ def submit_answers(
         }
     )
 
+    candidate_data = get_candidate(mailId)
     sns_result = publish_test_submitted_event(
         test_id=testId,
         mail_id=mailId,
         sections=sections_data,
         submitted_at=submittedAt,
+        candidate_data=candidate_data,
     )
 
     sqs_message_id = None
@@ -423,6 +425,16 @@ def get_candidate(
             "mailId": mail_id,
         }
     )
+
+    item = response.get("Item")
+    if not item:
+        try:
+            scan_res = users_table.scan(FilterExpression=Attr("mailId").eq(mail_id))
+            items = scan_res.get("Items", [])
+            if items:
+                item = items[0]
+        except Exception as e:
+            print("Error scanning users_table in get_candidate:", e)
 
     return item or {}
 
