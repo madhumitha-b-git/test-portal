@@ -625,6 +625,7 @@ const Review = () => {
 
       const submissionFormattedTime = new Date().toLocaleString();
       localStorage.setItem("submittedAtTime", submissionFormattedTime);
+      localStorage.setItem("testSubmittedAtTimestamp", Date.now().toString());
       localStorage.setItem("testSubmitted", "true");
       localStorage.setItem("submittedTestId", testId);
 

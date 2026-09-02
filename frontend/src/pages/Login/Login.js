@@ -120,16 +120,23 @@ const Login = () => {
   // Handle register inputs
   const handleRegChange = (e) => {
     const { name, value } = e.target;
-    setRegData({ ...regData, [name]: value });
+    const finalValue = name === "mailId" ? value.toLowerCase() : value;
+    setRegData({ ...regData, [name]: finalValue });
     setErrors({ ...errors, [name]: "", api: "" });
   };
 
   // Email format validator
   const isValidEmail = (email) => {
-    const trimmed = (email || "").trim();
+    const trimmed = (email || "").trim().toLowerCase();
     if (!trimmed) return false;
 
-    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    // Email must start with a letter (a-z)
+    if (!/^[a-z]/.test(trimmed)) {
+      return false;
+    }
+
+    // Local part allows only letters, numbers, dots, and underscores (_)
+    const emailRegex = /^[a-z0-9._]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
     return emailRegex.test(trimmed) && !trimmed.includes("..");
   };
 
@@ -137,7 +144,7 @@ const Login = () => {
   // Validate registration form
   const validateRegister = () => {
     const newErrors = {};
-    const email = (regData.mailId || "").trim();
+    const email = (regData.mailId || "").trim().toLowerCase();
 
     if (!regData.name.trim()) {
       newErrors.name = "Full name is required";
@@ -145,6 +152,10 @@ const Login = () => {
 
     if (!email) {
       newErrors.mailId = "Email address is required";
+    } else if (!/^[a-z]/.test(email)) {
+      newErrors.mailId = "Email address must start with a letter (a-z)";
+    } else if (/[^a-z0-9._]/.test(email.split("@")[0] || "")) {
+      newErrors.mailId = "Email contains invalid symbols.";
     } else if (!isValidEmail(email)) {
       newErrors.mailId = "Please enter a valid email address";
     }
@@ -224,10 +235,26 @@ const Login = () => {
 
       navigate("/instructions");
     } catch (error) {
-      const message = error.response?.data?.detail || "Registration failed. Please check your details and try again.";
+      const rawDetail = error.response?.data?.detail;
+      const rawMessage = error.response?.data?.message;
+      let message = "";
+
+      if (typeof rawDetail === "string") {
+        message = rawDetail;
+      } else if (Array.isArray(rawDetail) && rawDetail.length > 0) {
+        message = rawDetail.map((d) => (typeof d === "string" ? d : d.msg || d.message || JSON.stringify(d))).join(", ");
+      } else if (typeof rawMessage === "string") {
+        message = rawMessage;
+      } else if (error.message && typeof error.message === "string") {
+        message = error.message;
+      } else {
+        message = "Registration failed. Please check your details and try again.";
+      }
+
+      const msgLower = message.toLowerCase();
 
       // If email is already registered, check if candidate already completed this specific testId
-      if (message.toLowerCase().includes("already registered") || message.toLowerCase().includes("already exist")) {
+      if (msgLower.includes("already registered") || msgLower.includes("already exist")) {
         try {
           const loginRes = await loginCandidate({
             mailId: normalizedMail,

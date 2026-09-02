@@ -1,3 +1,4 @@
+import re
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import List, Optional
 
@@ -39,9 +40,15 @@ class RegisterRequest(BaseModel):
     @field_validator("mailId")
     @classmethod
     def mailId_must_be_valid(cls, v):
-        if not is_valid_email_domain(v):
+        v_clean = (v or "").strip().lower()
+        if not v_clean or not re.match(r"^[a-z]", v_clean):
+            raise ValueError("Email address must start with a letter (a-z)")
+        local_part = v_clean.split("@")[0] if "@" in v_clean else v_clean
+        if re.search(r"[^a-z0-9._]", local_part):
+            raise ValueError("Email contains invalid symbols. Only letters, numbers, dots, and underscores (_) are allowed")
+        if not is_valid_email_domain(v_clean):
             raise ValueError("Email domain must be one of: gmail.com, yahoo.com, outlook.com, ritchennai.edu.in, rajalakshmi.edu.in, bitsathy.ac.in")
-        return v.lower().strip()
+        return v_clean
 
     @field_validator("mobile")
     @classmethod

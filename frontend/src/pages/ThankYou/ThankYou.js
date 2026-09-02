@@ -35,15 +35,27 @@ const ThankYou = () => {
     // Automatically exit full-screen mode on thank you / concluded screen
     exitBrowserFullscreen();
 
-    // Clear all localStorage after 5 seconds of landing on ThankYou page
-    // Component state keeps the UI rendered; refreshing page redirects to Home (/)
-    const timer = setTimeout(() => {
+    // Calculate elapsed time from initial submission timestamp
+    const submittedAtTsStr = localStorage.getItem("testSubmittedAtTimestamp");
+    const submittedAtTs = submittedAtTsStr ? parseInt(submittedAtTsStr, 10) : Date.now();
+    const elapsed = Date.now() - submittedAtTs;
+    const remainingTime = Math.max(0, 5000 - elapsed);
+
+    // If 5 seconds have already passed prior to page reload/mount, clear storage immediately
+    if (elapsed >= 5000) {
       try {
         localStorage.clear();
       } catch (e) {}
-    }, 5000);
+    } else {
+      // Clear localStorage after remaining milliseconds of 5-second total window (does not reset on refresh)
+      const timer = setTimeout(() => {
+        try {
+          localStorage.clear();
+        } catch (e) {}
+      }, remainingTime);
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (
